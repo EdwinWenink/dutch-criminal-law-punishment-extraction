@@ -1,0 +1,5 @@
+# @package _global_
+skip_query: True
+caseparser:
+    skip: True
+

@@ -1,0 +1,5 @@
+# @package _global_
+dataloader:
+    target: 'strafmaat_cluster'  # column name of target class
+    # Only keep 'beslissing'; a 'keep_types' option would be easier in this particular case, but well.
+    drop_types: ['benadeelde partijen', 'bepaling strafbaarheid', 'beslag', 'bewezenverklaring', 'bijlage', 'eis', 'identificatie', 'inleiding', 'onderzoek', 'overig', 'overwegingen', 'procesverloop', 'strafoplegging', 'tenlastelegging', 'voorvragen', 'wettelijke voorschriften']   

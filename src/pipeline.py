@@ -1,5 +1,5 @@
 from src.caseloader import CaseLoader
-# from src.dataloader import DataLoader
+from src.dataloader import DataLoader
 from src.caseparser import CaseParser
 from src.utils import get_logger, construct_ECLI_query
 from omegaconf import DictConfig
@@ -61,27 +61,21 @@ def pipeline(config: DictConfig, **kwargs) -> None:
         # Parse all the returned cases
         df = parser.parse_all_cases(case_dir, write_case_text=False)
 
-        # Check how many sections are unlabeled ('other' / 'overig')
-        parser.inspect_overig_labels(df)  # NOTE Do this with level='section'!
+        # Inspect unlabeled sections ('other' / 'overig')
+        # parser.inspect_overig_labels(df)  # NOTE Do this with level='section'!
 
         # Write to csv
-        with open(data_dir / 'parsed_data.csv', encoding='utf-8', mode='w') as f:
+        with open(query_dir / 'parsed_data.csv', encoding='utf-8', mode='w') as f:
             df.to_csv(f)
 
-    else:
-        # TODO
-        df = ''
 
-    # Strafmaat labelling
+    # For each case decision extract all punishment and their heights as a vector
+    # and write them to the csv
 
+    # TODO make strafmaat_label part of the PARSING pipeline
 
-
-    # TODO
-    # Continue here; creating data set for ML
-
-    '''
     # Read data loader parameters from config
-    cased_data = config.dataloader.cased_data  # whether to read in cased input file (hardcoded filename)
+    # cased_data = config.dataloader.cased_data  # whether to read in cased input file
     reduce_to_sentences = config.dataloader.reduce_to_sentences  # Do we explode paragraph data to sentence level?
     binary_label = config.dataloader.binary_label  # Whether to convert class labels into a 2-class problem
     drop_columns = config.dataloader.drop_columns  # whether to drop 'overig' class
@@ -91,16 +85,13 @@ def pipeline(config: DictConfig, **kwargs) -> None:
     data_fn = config.dataloader.data_fn  # Name of the csv or json containing the data
     min_samples_per_class = config.dataloader.min_samples_per_class  # If None, no rows are dropped
 
-    data_path = Path(data_dir) / data_fn
-
     # Initialize data loader
-    dataloader = DataLoader(
-            data_dir=data_dir,
-            data_key=data_key,
-            target=target,
-            data_fn=data_fn,
-            reduce_to_sentences=reduce_to_sentences,
-            min_samples_per_class=min_samples_per_class)
+    dataloader = DataLoader(data_dir=query_dir,
+                            data_key=data_key,
+                            target=target,
+                            data_fn=data_fn,
+                            reduce_to_sentences=reduce_to_sentences,
+                            min_samples_per_class=min_samples_per_class)
 
     # Load data
     df = dataloader.load(drop_columns=drop_columns,
@@ -109,4 +100,4 @@ def pipeline(config: DictConfig, **kwargs) -> None:
                          binary_label=binary_label)  # loads data_fn by default
 
     log.info(df.columns)
-    '''
+

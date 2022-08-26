@@ -5,5 +5,5 @@ binary_label: null  #'overwegingen'; specify a value x of the target column; wil
 drop_columns: ['Unnamed: 0']
 drop_types: ['bijlage']  # ['overig', 'bijlage']
 data_key: 'data'
-data_fn: 'section_data_2021.csv'
+data_fn: 'parsed_data.csv'
 min_samples_per_class: 10  # if null, no rows will be dropped
