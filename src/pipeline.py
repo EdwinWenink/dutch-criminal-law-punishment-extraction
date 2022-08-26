@@ -1,28 +1,16 @@
 from src.caseloader import CaseLoader
-from src.dataloader import DataLoader
-from src.caseclassifier import CaseClassifier
-from src.feature_extraction import Features
+# from src.dataloader import DataLoader
 from src.caseparser import CaseParser
-from src.utils.utils import get_logger, construct_ECLI_query
-import src.utils.evaluation as eval
-from downstream_task.new.downstream.embedders import SectionEmbedder
-from omegaconf import DictConfig, OmegaConf
+from src.utils import get_logger, construct_ECLI_query
+from omegaconf import DictConfig
 from pathlib import Path
-from sklearn.svm import SVC
-from sklearn.naive_bayes import MultinomialNB
-from sklearn.ensemble import RandomForestClassifier
-import numpy as np
-import random
-import glob
 import os
-import csv
 
-# from hydra.utils import get_original_cwd
 
 def pipeline(config: DictConfig, **kwargs) -> None:
     '''
     This pipeline reads all relevant parameters from configurations files
-    and sets up the pipeline from data loading to prediction
+    and passes them to the appropriate classes
     '''
 
     # Initialize logging
@@ -35,12 +23,26 @@ def pipeline(config: DictConfig, **kwargs) -> None:
     os.makedirs(data_dir, exist_ok=True)
 
     # Construct ECLI-index query from parameters
-    # query = construct_ECLI_query(config.query)
+    query = construct_ECLI_query(config.query)
+    log.info("Query:", str(query))
 
-    # Case loader (not used currently)
-    # TODO flag whether you want to query or load data from disk
-    # caseloader = CaseLoader(data_dir)
+    # Where to store the cases
+    query_dir = Path(data_dir) / 'query'
 
+    # Initialize classes for retrieving cases from rechtspraak.nl
+    caseloader = CaseLoader(query_dir)
+
+    # Submit query that returns an atom feed with results
+    # `retrieve_all` flag recurses the request if there are more than `max` results
+    caseloader.query_ECLI_index(query, retrieve_all=True)
+
+    # Request the returned cases from the atom feed
+    # For convenience this function also returns the path where the cases are stored
+    case_dir = caseloader.request_cases_from_feed(check_section_labels=True)
+
+    # TODO WIP
+
+    '''
     # Read data loader parameters from config
     cased_data = config.dataloader.cased_data  # whether to read in cased input file (hardcoded filename)
     reduce_to_sentences = config.dataloader.reduce_to_sentences  # Do we explode paragraph data to sentence level?
@@ -70,3 +72,4 @@ def pipeline(config: DictConfig, **kwargs) -> None:
                          binary_label=binary_label)  # loads data_fn by default
 
     log.info(df.columns)
+    '''

@@ -2,11 +2,11 @@ import glob
 import regex
 from pathlib import Path
 import pandas
-from bs4 import BeautifulSoup, NavigableString
+from bs4 import BeautifulSoup
 from collections import defaultdict
 import pandas as pd
 import numpy as np
-from argmine.utils.utils import get_logger
+from src.utils import get_logger
 
 log = get_logger(__name__)
 

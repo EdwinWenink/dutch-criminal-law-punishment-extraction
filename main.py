@@ -4,10 +4,10 @@ from omegaconf import DictConfig, OmegaConf
 from src.pipeline import pipeline
 
 
-@hydra.main(config_path="src/config", config_name="config")
+@hydra.main(config_path="config", config_name="config")
 def main(config: DictConfig) -> None:
     # Delayed import for tab completion, see here: https://github.com/facebookresearch/hydra/issues/934
-    from src.utils import utils
+    from src import utils
     # A couple of optional utilities:
     # - disabling python warnings
     # - easier access to debug mode

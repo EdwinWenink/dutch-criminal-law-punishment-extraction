@@ -6,8 +6,6 @@ info: "Argument mining project by Edwin Wenink at TNO"
 defaults:
     - _self_
     - dataloader: default
-    - features: default
-    - training: default
     - query: default
 
 # https://hydra.cc/docs/next/tutorials/basic/running_your_app/working_directory/
@@ -24,7 +22,7 @@ print_config: True
 # disable python warnings 
 ignore_warnings: False
 
-# Debug mode  (override from command line: python main_argmine.py debug=true)
+# Debug mode  (override from command line: python main.py debug=true)
 debug: False
 
 # Hydra hijacks the run directory

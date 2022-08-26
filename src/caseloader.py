@@ -1,21 +1,22 @@
 import requests
 import os
 import regex
-import feedparser as fp 
+import feedparser as fp
 import glob
 from pathlib import Path
-from argmine.caseparser import CaseParser
 from datetime import datetime
-from argmine.utils.utils import get_logger, construct_ECLI_query
+from src.caseparser import CaseParser
+from src.utils import get_logger, construct_ECLI_query
 
 log = get_logger(__name__)
+
 
 class CaseLoader:
     '''
     Class for querying the ECLI index of Open Data van de Rechtspraak
     '''
 
-    def __init__(self, out_dir='./data' ):
+    def __init__(self, out_dir='./data'):
         '''
         out_dir     optionally specify data subfolder to store query results in
         '''
@@ -55,9 +56,9 @@ class CaseLoader:
         # If result already exists, do nothing; otherwise query and download the results
         if not results.is_file():
             #log.info("Query:", url)
-            print("Query:", url)
+            log.info(f"Query: {url}")
             r = requests.get(url, allow_redirects=True)
-            print("Retrieving cases starting from index ", idx_from)
+            log.info(f"Retrieving cases starting from index {idx_from}")
 
             # Parse the returned atom feed to check how many ECLIs match the query
             # and also how many are returned in the feed itself
@@ -69,11 +70,11 @@ class CaseLoader:
 
             with open(results, 'wb') as f:
                 f.write(r.content)
-            print(f"Query results starting from index {idx_from} saved on disk")
+            log.info(f"Query results starting from index {idx_from} saved on disk")
         else:
-            print("Query results already present on disk")
+            log.info("Query results already present on disk")
             # This case I ALSO need to increment with the amount of ECLIds
-            # in the feed that's already on disk. This allows correct querying 
+            # in the feed that's already on disk. This allows correct querying
             # if some results are present while others are not.
             d = fp.parse(results)
             ECLIds = [ entry.id for entry in d.entries ]
@@ -82,7 +83,7 @@ class CaseLoader:
             n_hits = int(self.match_nr.search(d.feed.subtitle).group(0))
 
         # Progress
-        print(f"Retrieved {already_retrieved} cases from total of {n_hits}")
+        log.info(f"Retrieved {already_retrieved} cases from total of {n_hits}")
 
         # If we want to retrieve all cases returned by the query,
         # we need to repeat the query with the 'from' parameter
@@ -117,22 +118,22 @@ class CaseLoader:
         outfile = out_dir / ECLI
         if not outfile.exists():
             # Download content
-            if verbose: print("URL: ", url)
+            if verbose: log.info(f"URL: {url}")
             r = requests.get(url, allow_redirects=True)
             if check_section_labels:
                 if self.parser.check_section_labels(r.content):
                     with open(outfile, 'wb') as f:
                         f.write(r.content)
-                        if verbose: print(f"SAVING {ECLI}") # to {outfile}")
+                        if verbose: log.info(f"SAVING {ECLI}") # to {outfile}")
                 else:
-                    if verbose: print(f"{ECLI} NOT SAVED due to missing section labels")
+                    if verbose: log.info(f"{ECLI} NOT SAVED due to missing section labels")
                     return False
             else:
                 with open(outfile, 'wb') as f:
                     f.write(r.content)
-                    if verbose: print(f"Saving {ECLI}") # to {outfile}")
-        else: 
-            if verbose: print("File already exists: ", outfile)
+                    if verbose: log.info(f"Saving {ECLI}")  # to {outfile}")
+        else:
+            if verbose: log.info(f"File already exists: {outfile}")
 
         return True
 
@@ -147,7 +148,7 @@ class CaseLoader:
         results = list(glob.iglob(str(self.out_dir / 'results_from*atom'), recursive=False))
 
         if len(results) == 0:
-            print("Submit a query first. Results not available.")
+            log.info("Submit a query first. Results not available.")
             return
 
         # Where to store the case xmls
@@ -162,7 +163,7 @@ class CaseLoader:
 
             # Retrieve case numbers in the current feed
             ECLIds = [entry.id for entry in d.entries]
-            # print("Queried ECLIs: ", len(ECLIds))
+            # log.info(f"Queried ECLIs: {len(ECLIds)}")
 
             # Keep track of all ECLIds
             all_ECLIds.append(ECLIds)
@@ -173,14 +174,14 @@ class CaseLoader:
                 if success:
                     counter += 1
 
-            print(f"{counter} ECLIs on disk")
+            log.info(f"{counter} ECLIs on disk")
 
         # flatten list
         ECLIds = [ECLI for ECLI_list in all_ECLIds for ECLI in ECLI_list]
 
         with open(self.out_dir / 'query_ECLIds.txt', 'w') as f:
             f.writelines(f"{ECLI}\n" for ECLI in ECLIds)
-            print("All query ECLI written to index")
+            log.info("All query ECLI written to index")
 
         # Return the location of the returned cases
         return case_dir
