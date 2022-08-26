@@ -24,7 +24,7 @@ def pipeline(config: DictConfig, **kwargs) -> None:
 
     # Construct ECLI-index query from parameters
     query = construct_ECLI_query(config.query)
-    log.info("Query:", str(query))
+    log.info(f"Query: {query}")
 
     # Where to store the cases
     query_dir = Path(data_dir) / 'query'
@@ -32,15 +32,52 @@ def pipeline(config: DictConfig, **kwargs) -> None:
     # Initialize classes for retrieving cases from rechtspraak.nl
     caseloader = CaseLoader(query_dir)
 
-    # Submit query that returns an atom feed with results
-    # `retrieve_all` flag recurses the request if there are more than `max` results
-    caseloader.query_ECLI_index(query, retrieve_all=True)
+    if not config.skip_query:
+        # Submit query that returns an atom feed with results
+        # `retrieve_all` flag recurses the request if there are more than `max` results
+        caseloader.query_ECLI_index(query, retrieve_all=True)
 
-    # Request the returned cases from the atom feed
-    # For convenience this function also returns the path where the cases are stored
-    case_dir = caseloader.request_cases_from_feed(check_section_labels=True)
+        # Request the returned cases from the atom feed
+        # For convenience this function also returns the path where the cases are stored
+        case_dir = caseloader.request_cases_from_feed(check_section_labels=True)
+    else:
+        case_dir = query_dir / 'cases'
 
-    # TODO WIP
+    if not config.caseparser.skip:
+        # Config for parsing the xml of the downloaded cases
+        level = config.caseparser.level
+        include_section_titles = config.caseparser.include_section_titles
+        # ['Hoger beroep', 'Cassatie', 'Cassatie in het belang der wet', 'Raadkamer',
+        # 'Artikel 81 RO-zaken', 'Wraking', 'Beschikking']
+        exclude_procedures = config.caseparser.exclude_procedures
+        data_to_key = config.caseparser.data_key
+
+        # Initialize the xml parser
+        parser = CaseParser(data_key=data_to_key,
+                            level=level,
+                            include_section_titles=include_section_titles,
+                            exclude_procedures=exclude_procedures)
+
+        # Parse all the returned cases
+        df = parser.parse_all_cases(case_dir, write_case_text=False)
+
+        # Check how many sections are unlabeled ('other' / 'overig')
+        parser.inspect_overig_labels(df)  # NOTE Do this with level='section'!
+
+        # Write to csv
+        with open(data_dir / 'parsed_data.csv', encoding='utf-8', mode='w') as f:
+            df.to_csv(f)
+
+    else:
+        # TODO
+        df = ''
+
+    # Strafmaat labelling
+
+
+
+    # TODO
+    # Continue here; creating data set for ML
 
     '''
     # Read data loader parameters from config

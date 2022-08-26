@@ -1,11 +1,10 @@
 import glob
 import regex
-from pathlib import Path
-import pandas
-from bs4 import BeautifulSoup
-from collections import defaultdict
 import pandas as pd
 import numpy as np
+from pathlib import Path
+from bs4 import BeautifulSoup
+from collections import defaultdict
 from src.utils import get_logger
 
 log = get_logger(__name__)
@@ -78,7 +77,7 @@ class CaseParser:
                 nr.string = nr.string+' '
             else:
                 # There is an edge case where nr.string is a NoneType
-                print(f"Warning: <nr> {nr.string} in {nr} is of type {type(nr.string)} ")
+                log.info(f"Warning: <nr> {nr.string} in {nr} is of type {type(nr.string)} ")
 
         # Metadata
         description = soup.Description
@@ -91,7 +90,7 @@ class CaseParser:
 
         # Do not parse case if it's of a procedure in the exclude list
         if procedure in self.exclude_procedures:
-            print(f"Skipping {ECLI} ({procedure})")
+            log.info(f"Skipping {ECLI} ({procedure})")
             return None, None, None, None
 
         # Date of case
@@ -114,17 +113,17 @@ class CaseParser:
             # We don't need the soup object anymore, just the text
             inhoudsindicatie = inhoudsindicatie.get_text()
         except AttributeError as e:
-            print("Parsing <inhoudsindicatie> failed")
-            print(e)
+            log.info("Parsing <inhoudsindicatie> failed")
+            log.error(e)
             inhoudsindicatie = ''
 
-        print("Parsing case ", ECLI)
+        log.info(f"Parsing case {ECLI}")
 
         try:
             # This fails e.g. for ECLIs of type PHR -> ECLI:NL:PHR:YYYY:XXXX
             case_raw = soup.uitspraak.get_text()
         except AttributeError as e:
-            print(e)
+            log.error(e)
             # If this happens, "inhoudsindicatie" is included in case_raw
             # So filter it out again to avoid duplicating text
             case_raw = soup.get_text()
@@ -697,7 +696,7 @@ class CaseParser:
                         f.write(case_raw)
 
         if len(dataframes) == 0:
-            print("Dataframe is empty! No xml files parsed.")
+            log.error("Dataframe is empty! No xml files parsed.")
             return
 
         df = pd.concat(dataframes, axis=0)
@@ -712,7 +711,7 @@ class CaseParser:
 
         # Drop rows with no associated text data
         df[self.data_key].replace('', np.nan, inplace=True)
-        print(f"Dropping {np.sum(df[self.data_key].isna())} sections without text")
+        log.warning(f"Dropping {np.sum(df[self.data_key].isna())} sections without text")
         df.dropna(subset=[self.data_key], inplace=True)
 
         # df = pd.concat(dataframes, keys=ECLIds)
@@ -748,7 +747,7 @@ class CaseParser:
         # sections = soup.find_all('section')  # returns empty list if not present
         sections = soup.find('section')  # returns None is not present
         if sections is None or len(sections) == 0:  # This catches both scenarios
-            log.info("Case xml contains no sections.")
+            log.warning("Case xml contains no sections.")
             return False
 
         # Formele opmerkingen over procesverloop
@@ -769,32 +768,29 @@ class CaseParser:
 
     def inspect_overig_labels(self, df):
         # Print type labels
-        print(df['type'].value_counts())
+        log.info(df['type'].value_counts())
 
         # Check which labels are still overig
         overig_df = df[ df['type'] == 'overig']
         for i, data in overig_df.iterrows():
-            print()
-            print(data.loc['ECLI'])
-            print(data.loc['title'])
-            print(data.loc[self.data_key])
-            print()
+            log.info(data.loc['ECLI'])
+            log.info(data.loc['title'])
+            log.info(data.loc[self.data_key])
 
-        print("Overig:", len(overig_df))
+        log.info(f"Overig: {len(overig_df)}")
 
 
 if __name__ == '__main__':
 
-    # TODO accept args
-
     case_dir = 'data/new/query_last_year/cases/'
     # case_dir = 'data/new/query_test/cases/'
-    level = 'section' # 'paragraph'
+    level = 'section'  # 'paragraph'
     # When False, you'll have slightly more empty columns,
     # meaning that some sections only have a title
     include_section_titles = True
     # include_section_titles = False
-    exclude_procedures = ['Hoger beroep', 'Cassatie', 'Cassatie in het belang der wet', 'Raadkamer', 'Artikel 81 RO-zaken', 'Wraking', 'Beschikking']
+    exclude_procedures = ['Hoger beroep', 'Cassatie', 'Cassatie in het belang der wet',
+                          'Raadkamer', 'Artikel 81 RO-zaken', 'Wraking', 'Beschikking']
 
     parser = CaseParser(data_key='data',
                         level=level,
@@ -810,38 +806,6 @@ if __name__ == '__main__':
     with open('data/new/parsed_data.csv', encoding='utf-8', mode='w') as f:
         df.to_csv(f)
 
-
-    '''
-
-    # Just for quick testing
-    query_dir = Path(r'data\type=uitspraak&Subject=http%3A%2F%2Fpsi.rechtspraak.nl%2Frechtsgebied%23strafrecht&date=2020-06-01&date=2021-01-01&max=50&return=DOC')
-
-    for source in glob.glob(f'{query_dir}/*.xml'):
-        with open(source, mode='r', encoding='utf-8') as f:
-            uitspraak = f.read()
-            if parser.check_section_labels(uitspraak, get_raw_text=False):
-                print("Check PASSED")
-            else:
-                print("Check FAILED: ", source)
-    '''
-
-    '''
-    #ecli = 'ECLI-NL-GHAMS-2020-1451'
-    #ecli = 'ECLI-NL-GHARL-2020-4169'
-    #ecli = 'ECLI-NL-RBAMS-2020-2789'
-    #ecli = 'ECLI-NL-RBAMS-2020-2791'
-    #ecli = 'ECLI-NL-RBAMS-2020-2830'
-    ecli = 'ECLI-NL-RBAMS-2020-2831'
-    #ecli = 'ECLI-NL-RBNHO-2020-4026'
-
-    source = query_dir / f"{ecli}.xml"
-    with open(source, mode='r', encoding='utf-8') as f:
-        uitspraak = f.read()
-    ECLI, case_raw, inhoudsindicatie, section_data = parser.parse_case(uitspraak)
-    '''
-
-    #df = parser.parse_all_cases(query_dir, write_case_text=False, include_inhoudsindicatie=True)
-    #print(df)
 
 # Soms is er een "grondslag van het geschil" zonder role-identifier
 

@@ -1,0 +1,5 @@
+level: 'section'  # paragraph
+include_section_titles: True  # When False, you'll have slightly more empty columns, meaning that some sections only have a title
+exclude_procedures: ['Hoger beroep', 'Cassatie', 'Cassatie in het belang der wet', 'Raadkamer', 'Artikel 81 RO-zaken', 'Wraking', 'Beschikking']
+data_key: 'data'  # key under which to store data in the csv/dataframe
+skip: False

@@ -1,4 +1,4 @@
-info: "Argument mining project by Edwin Wenink at TNO"
+info: "Extracting punishments from Dutch criminal law cases"
 
 # The code base contains 'is None' checks
 # To return a NoneType from the config, either comment out a line or pass null
@@ -6,6 +6,7 @@ info: "Argument mining project by Edwin Wenink at TNO"
 defaults:
     - _self_
     - dataloader: default
+    - caseparser: default
     - query: default
 
 # https://hydra.cc/docs/next/tutorials/basic/running_your_app/working_directory/
@@ -25,11 +26,15 @@ ignore_warnings: False
 # Debug mode  (override from command line: python main.py debug=true)
 debug: False
 
+# Skip querying and download cases if they are already on disk
+# python main.py skip_query=true
+skip_query: False
+
 # Hydra hijacks the run directory
 # You can override it here
 # TODO the main log is dumped in the working directory, but I want it in output_subdir instead
 hydra:
     run:
         dir: ${original_work_dir}
-    output_subdir: argmine/outputs/${now:%Y-%m-%d}/${now:%H-%M-%S}
+    output_subdir: logs/outputs/${now:%Y-%m-%d}/${now:%H-%M-%S}
     verbose: False  # set log level of all loggers to debug

@@ -708,7 +708,7 @@ if __name__ == '__main__':
 
     # Default values
     data_fn = 'section_data_2021.csv'
-    data_dir = './data/new/'
+    data_dir = './data/'
 
     parser = ArgumentParser()
     parser.add_argument("-i", "--input", dest="data_fn", default=data_fn)
