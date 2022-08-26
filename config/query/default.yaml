@@ -1,0 +1,8 @@
+# PARAMETERS for the ECLI-index query 
+# Er is een "proceduresoort" parameter, maar zo te zien niet voor het bevragen van de ECLI index
+type: 'uitspraak'
+subject: 'http%3A%2F%2Fpsi.rechtspraak.nl%2Frechtsgebied%23strafrecht'
+date_from: '2020-06-01'
+date_until: '2021-01-01'
+max: '1000'  # default max, as well as highest possible max, is 1000
+return: 'DOC'  # Only return ECLIs with attached cases (opposed to metadata only)

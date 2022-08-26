@@ -1,0 +1,37 @@
+info: "Argument mining project by Edwin Wenink at TNO"
+
+# The code base contains 'is None' checks
+# To return a NoneType from the config, either comment out a line or pass null
+
+defaults:
+    - _self_
+    - dataloader: default
+    - features: default
+    - training: default
+    - query: default
+
+# https://hydra.cc/docs/next/tutorials/basic/running_your_app/working_directory/
+# This is the *original* working directory (Hydra hijacks the cwd and makes its own)
+# You can also get this in Python with `from hydra.utils import get_original_cwd`
+original_work_dir: ${hydra:runtime.cwd}
+
+# path to folder with data
+data_dir: ${original_work_dir}/data
+
+# pretty print config at the start of the run using Rich library
+print_config: True
+
+# disable python warnings 
+ignore_warnings: False
+
+# Debug mode  (override from command line: python main_argmine.py debug=true)
+debug: False
+
+# Hydra hijacks the run directory
+# You can override it here
+# TODO the main log is dumped in the working directory, but I want it in output_subdir instead
+hydra:
+    run:
+        dir: ${original_work_dir}
+    output_subdir: argmine/outputs/${now:%Y-%m-%d}/${now:%H-%M-%S}
+    verbose: False  # set log level of all loggers to debug

@@ -1,0 +1,10 @@
+reduce_to_sentences: False
+cased_data: True
+target: 'type'  # column name of target class
+binary_label: null  #'overwegingen'; specify a value x of the target column; will convert target to x vs. non-x
+drop_columns: ['Unnamed: 0']
+drop_types: ['bijlage']  # ['overig', 'bijlage']
+data_key: 'data'
+# data_fn: 'data_section_w_title.csv'  # paragraph_data.csv; paragraph_data_cased.csv (make sure to match cased_data!)
+data_fn: 'section_data_2021.csv'  # paragraph_data.csv; paragraph_data_cased.csv (make sure to match cased_data!)
+min_samples_per_class: 10  # if null, no rows will be dropped
