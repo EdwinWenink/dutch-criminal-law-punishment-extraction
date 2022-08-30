@@ -2,6 +2,7 @@ from src.caseloader import CaseLoader
 from src.dataloader import DataLoader
 from src.caseparser import CaseParser
 from src.utils import get_logger, construct_ECLI_query
+from src.extract_punishments import extract_all_punishment_vectors
 from omegaconf import DictConfig
 from pathlib import Path
 import os
@@ -101,3 +102,7 @@ def pipeline(config: DictConfig, **kwargs) -> None:
 
     log.info(df.columns)
 
+    # Extract punishment vectors
+    # TODO maybe option to skip?
+    df = extract_all_punishment_vectors(df)
+    df.to_csv(dataloader.data_path)

@@ -1,6 +1,6 @@
 import sys
-from argmine.dataloader import DataLoader
-from argmine.utils import utils
+from src.dataloader import DataLoader
+from src import utils
 from argparse import ArgumentParser
 import numpy as np
 import re
