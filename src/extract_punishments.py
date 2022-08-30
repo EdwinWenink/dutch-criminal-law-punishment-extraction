@@ -524,7 +524,7 @@ def pick_highest_from_vector(straf_vector: tuple):
     return 'nan', 0
 
 
-def extract_all_straf_vectors(df, data_column='data'):
+def extract_all_punishment_vectors(df, data_column='data'):
     # Require a 'type' column, because only "beslissing", and ... are relevant for labelling
     beslissingen = df.loc[df['type'] == 'beslissing'][data_column]
     # wetten = df[ df['articles'] ]
@@ -731,7 +731,7 @@ if __name__ == '__main__':
     # Set this flag if you only want to check and debug some specific cases and test cases
     if not DEBUG:
         # df = label_all_beslissingen(df)
-        df = extract_all_straf_vectors(df)
+        df = extract_all_punishment_vectors(df)
         df.to_csv(dataloader.data_path)
     else:
         print("DEBUG MODE ENABLED.")
@@ -787,6 +787,8 @@ if __name__ == '__main__':
 
     # Select random beslissingen for manual validation
     beslissingen = df.loc[df['type'] == 'beslissing']
+
+    # TODO move to eval function
 
     # evaluate_strafmaat_7_feb.md took 25 cases from 2021 (so use paragraph_data_year)
     # I've changed this data set in the meantime (no impact on eval though), so here is a manual list of the original validation cases
