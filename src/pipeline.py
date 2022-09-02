@@ -2,13 +2,13 @@ from src.caseloader import CaseLoader
 from src.dataloader import DataLoader
 from src.caseparser import CaseParser
 from src.utils import get_logger, construct_ECLI_query
-from src.extract_punishments import extract_all_punishment_vectors
+from src.extract_punishments import extract_all_punishment_vectors, PunishmentPattern, label_hoofdstraf
 from omegaconf import DictConfig
 from pathlib import Path
 import os
 
 
-def pipeline(config: DictConfig, **kwargs) -> None:
+def run_pipeline(config: DictConfig, **kwargs) -> None:
     '''
     This pipeline reads all relevant parameters from configurations files
     and passes them to the appropriate classes
@@ -104,5 +104,6 @@ def pipeline(config: DictConfig, **kwargs) -> None:
 
     # Extract punishment vectors
     # TODO maybe option to skip?
-    df = extract_all_punishment_vectors(df)
+    pp = PunishmentPattern()
+    df = extract_all_punishment_vectors(pp, df, 'data')
     df.to_csv(dataloader.data_path)

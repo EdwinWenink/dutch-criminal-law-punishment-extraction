@@ -1,6 +1,7 @@
 import logging
 import warnings
 import functools
+import difflib
 from typing import Sequence
 from omegaconf import DictConfig, OmegaConf
 import rich
@@ -776,3 +777,18 @@ def convert_vectors_to_binary(vectors):
     vectors = np.array(vectors)
     binary_vectors = (vectors > 0).astype(int)
     return binary_vectors
+
+
+def diff_pattern(pattern_from: str, pattern_to: str):
+    '''
+    Utility function that shows how to change one pattern into another
+    Useful for comparing two regular expressions.
+    '''
+    print('{}\n=>\n{}'.format(pattern_from, pattern_to))
+    for i, s in enumerate(difflib.ndiff(pattern_from, pattern_to)):
+        if s[0] == ' ':
+            continue
+        elif s[0] == '-':
+            print(u'Delete "{}" from position {}'.format(s[-1], i))
+        elif s[0] == '+':
+            print(u'Add "{}" to position {}'.format(s[-1], i))

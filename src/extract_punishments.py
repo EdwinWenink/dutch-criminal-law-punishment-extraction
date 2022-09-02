@@ -1,16 +1,15 @@
-import sys
 from src.dataloader import DataLoader
 from src import utils
+from src.utils import diff_pattern
+# import src.eval_punishment_extraction
 from argparse import ArgumentParser
 import numpy as np
 import re
-import difflib
 import math
 import pandas as pd
-import random
 
 '''
-This is a script to extract punishments from the judgements of Dutch criminal law cases.
+This is a script to extract punishments from the judgments of Dutch criminal law cases.
 
 This script assumes we have a dataset (as produced by caseloader.py and caseparser.py) that can be read in via csv
 and has a `type` column with `beslissing` entries indicating which text sections contain the final verdict.
@@ -18,7 +17,9 @@ and has a `type` column with `beslissing` entries indicating which text sections
 Dutch criminal law knows four main types of punishment ('hoofdstraffen'):
 
     - prison sentence / gevangenisstraf (levenslang, tijdelijk)
-    - custody / hechtenis (but 'voorlopige hechtenis' is not a punishment! opgelegd voor overtredingen; maximum duur van een jaar; in uitzonderlijke gevallen 1 jaar en 4 maanden = 487 dagen)
+    - custody / hechtenis 
+        * but 'voorlopige hechtenis' is not a punishment! opgelegd voor overtredingen;
+        * Maximum duur van een jaar; in uitzonderlijke gevallen 1 jaar en 4 maanden = 487 dagen
         * Deze straf wordt praktisch niet opgelegd.
     - community service / taakstraf (werkstraf of leerstraf); wordt niet opgelegd als er al minstens een half jaar gevangenisstraf is opgelegd; max 240 uur.
     - fine / geldboete volgens categorieën systeem, gaat altijd gepaard met vervangende hechtenis als aan het bedrag niet wordt voldaan, met max een dag per 25 euro en een totale max. van een jaar:
@@ -58,79 +59,86 @@ This script extracts the four main punishments and the TBS maatregel,
 (which is very severe and is informally counted as a main punishment though formally not being one)
 '''
 
-# I do not want to match cases like "gevangenisstraf een gedeelte, groot 3 (drie) maanden niet ten uitvoer"
-# Negative matching is very hard, so instead I match these modifiers and then do post-filtering on the ones I want to exclude
-# Current limitation: we assume the punishment comes before the duration. E.g. 'veroordeelt de verdachte tot 3 maanden gevangenis' is not matched.
-# Compound punishment is supported "gevangenisstraf voor de duur van 2 (twee) jaar en 6 (zes) maanden"
-# Things like "maandelijkse termijnen" are excluded
-# [^0-9\n\r.;] avoids matching newlines and dots (which \D *does*), which can cause issues, e.g.:
-# 0-9 prevents that the wildcard consumes the first digit of fines, e.g. in "60 euro" the first 6 will be consumed by the wildcard, only the 0 captures by the "bedrag" pattern
-# However, 0-9 will prevent matches when a digit occurs in between, e.g. "geldboete toegewezen aan [slachtoffer 1] volgens artikel 1 van 60 Euro".
-connector = r'[^\n\r;.]{0,100}'  # TODO refactor to use this
-connector_long = r'[^\n\r;.]{0,150}'  # TODO refactor to use this
-# Avoid matching parketnummer as large fine in "vordering van de officier van justitie tot tenuitvoerlegging in de zaak met parketnummer 23/003276-17 en gelast de tenuitvoerlegging van de niet ten uitvoer gelegde gevangenisstraf voor de duur" E.g. see ECLI:NL:RBGEL:2020:6993
-modifier1 = r'(?P<modifier1>voorwaardelijk|proeftijd|niet|vervangend|indien|mindering|maatregel)'
-# The second part is often a subsidiary custody; we match 'hechtenis' to catch and avoid the following edge case:
-# MATCH TAAKSTRAF: taakstraf van 80 (tachtig) uren, met bevel dat indien deze straf niet naar behoren wordt verricht vervangend
-# MATCH HECHTENIS: hechtenis zal worden toegepast voor de duur van 40 (veertig) dagen
-modifier2 = r'(?P<modifier2>voorwaardelijk|proeftijd|niet|vervangend|indien|hechtenis|wederrechtelijk)'
-months = r'(?:januari|februari|maart|april|mei|juni|juli|augustus|september|oktober|november|december)'
-# Vordering is ambiguous; often used as "vordering tenuitvoerlegging van voorwaardelijke straf"; do lookahead
-straf = r'gevangenis|gevangenisstraf|jeugddetentie|detentie|hechtenis|taakstraf|werkstraf|leerstraf|geldboete|vordering(?!\stenuitvoerlegging)(?!\stot\stenuitvoerlegging)|betaling'
-nummer = r'(?<!feit )\d+(?!\s?\]'
-# middle regex requires a space before the eenheid; e.g. not to match "uur" in "duur"
-# This only works for the second eenheid!... there's no space before ,-- in 64,--
-# capture optional / to avoid matching parketnummer
-# capture optional - to avoid parsing dates, like 16-09-2021
-eenheid1 = r'jaar|jaren|maanden|maand|week|weken|dag|dagen|uur|uren|euro|,[-\d=]{1,2}|(?:\/|-|:)?[\d.]+(?!\s?\])(?:,[-\d=]{1,2})?'
-eenheid2 = r'jaar|jaren|maanden|maand|week|weken|dagen|dag|uur|uren' # diff with eenheid1 is absence of money-related matching
 
-# TODO test without 'betaling'
-# TODO test without 'gevangenis'
-# NOTE kan evt. 'dagen' weglaten, 'dag' matcht ook, ibid. for 'maanden'
-# Match backslash before numbers to avoid matching "parketnummer 23/003276-17" as a bedrag
-# {1,85} number needs to occur in a window of 85 chars after the hoofdstraf (num is empirically tuned)
-# {0,10} short window between num and eenheid, which should follow afterwards directly
-# this catches "gevangenisstraf van 12 (twaalf) maanden, waarvan  6 (zes) maanden voorwaardelijk met een proeftijd"!
-# Be aware that regex { } require escapes
-middle = r'\b(?P<straf>{})\b(?P<test1>[^\n\r;.]{{0,85}}?)(?P<nummer1>{}))(?P<test2>[^0-9\n\r;.]{{0,30}}?)(?P<eenheid1>{})(?P<niettest1>[^0-9\n\r;.]{{0,15}})(?:(?P<nummer2>{}))[^0-9\n\r;.]{{0,30}}?(?:\s(?P<eenheid2>{})))?'.format(straf, nummer, eenheid1, nummer, eenheid2)
+class PunishmentPattern():
+    """Object to compose patterns for punishment extraction."""
 
-# The composed pattern
-pattern = r'(?i)(?:{}{})?{}(?:(?P<niettest2>{}){})?'.format(modifier1, connector, middle, connector_long, modifier2)
+    def __init__(self):
 
-# https://regex101.com/r/6fbiBD/12
-pattern_full = r'(?i)(?:(?P<modifier1>voorwaardelijk|proeftijd|niet|vervangend|indien|mindering|maatregel)[^\n\r;.]{0,100})?\b(?P<straf>gevangenis|gevangenisstraf|jeugddetentie|detentie|hechtenis|taakstraf|werkstraf|leerstraf|geldboete|vordering(?!\stenuitvoerlegging)(?!\stot\stenuitvoerlegging)|betaling)\b(?P<test1>[^\n\r;.]{0,85}?)(?P<nummer1>(?<!feit )\d+(?!\s?\]))(?P<test2>[^0-9\n\r;.]{0,30}?)(?P<eenheid1>jaar|jaren|maanden|maand|week|weken|dag|dagen|uur|uren|euro|,[-\d=]{1,2}|(?:\/|-|:)?[\d.]+(?!\s?\])(?:,[-\d=]{1,2})?)(?P<niettest1>[^0-9\n\r;.]{0,15})(?:(?P<nummer2>(?<!feit )\d+(?!\s?\]))[^0-9\n\r;.]{0,30}?(?:\s(?P<eenheid2>jaar|jaren|maanden|maand|week|weken|dagen|dag|uur|uren)))?(?:(?P<niettest2>[^\n\r;.]{0,150})(?P<modifier2>voorwaardelijk|proeftijd|niet|vervangend|indien|hechtenis|wederrechtelijk))?'
+        # I do not want to match cases like "gevangenisstraf een gedeelte, groot 3 (drie) maanden niet ten uitvoer"
+        # Negative matching is very hard, so instead I match these modifiers and then do post-filtering on the ones I want to exclude
+        # Current limitation: we assume the punishment comes before the duration. E.g. 'veroordeelt de verdachte tot 3 maanden gevangenis' is not matched.
+        # Compound punishment is supported: "gevangenisstraf voor de duur van 2 (twee) jaar en 6 (zes) maanden"
+        # Things like "maandelijkse termijnen" are excluded
+        # [^0-9\n\r.;] avoids matching newlines and dots (which \D *does*), which can cause issues, e.g.:
+        # 0-9 prevents that the wildcard consumes the first digit of fines, e.g. in "60 euro" the first 6 will be consumed by the wildcard, only the 0 captures by the "bedrag" pattern
+        # However, 0-9 will prevent matches when a digit occurs in between, e.g. "geldboete toegewezen aan [slachtoffer 1] volgens artikel 1 van 60 Euro".
+        self.connector = r'[^\n\r;.]{0,100}'  # TODO refactor to use this
+        self.connector_long = r'[^\n\r;.]{0,150}'  # TODO refactor to use this
+        # Avoid matching parketnummer as large fine in "vordering van de officier van justitie tot tenuitvoerlegging in de zaak met parketnummer 23/003276-17 en gelast de tenuitvoerlegging van de niet ten uitvoer gelegde gevangenisstraf voor de duur" E.g. see ECLI:NL:RBGEL:2020:6993
+        self.modifier1 = r'(?P<modifier1>voorwaardelijk|proeftijd|niet|vervangend|indien|mindering|maatregel)'
+        # The second part is often a subsidiary custody; we match 'hechtenis' to catch and avoid the following edge case:
+        # MATCH TAAKSTRAF: taakstraf van 80 (tachtig) uren, met bevel dat indien deze straf niet naar behoren wordt verricht vervangend
+        # MATCH HECHTENIS: hechtenis zal worden toegepast voor de duur van 40 (veertig) dagen
+        self.modifier2 = r'(?P<modifier2>voorwaardelijk|proeftijd|niet|vervangend|indien|hechtenis|wederrechtelijk)'
+        # NOTE not used?
+        self.months = r'(?:januari|februari|maart|april|mei|juni|juli|augustus|september|oktober|november|december)'
+        # Vordering is ambiguous; often used as "vordering tenuitvoerlegging van voorwaardelijke straf"; do lookahead
+        self.straf = r'gevangenis|gevangenisstraf|jeugddetentie|detentie|hechtenis|taakstraf|werkstraf|leerstraf|geldboete|vordering(?!\stenuitvoerlegging)(?!\stot\stenuitvoerlegging)|betaling'
+        self.nummer = r'(?<!feit )\d+(?!\s?\]'
+        # middle regex requires a space before the eenheid; e.g. not to match "uur" in "duur"
+        # This only works for the second eenheid!... there's no space before ,-- in 64,--
+        # capture optional / to avoid matching parketnummer
+        # capture optional - to avoid parsing dates, like 16-09-2021
+        self.eenheid1 = r'jaar|jaren|maanden|maand|week|weken|dag|dagen|uur|uren|euro|,[-\d=]{1,2}|(?:\/|-|:)?[\d.]+(?!\s?\])(?:,[-\d=]{1,2})?'
+        self.eenheid2 = r'jaar|jaren|maanden|maand|week|weken|dagen|dag|uur|uren' # diff with eenheid1 is absence of money-related matching
 
-regex_hoofdstraf = re.compile(pattern)
+        # TODO test without 'betaling'
+        # TODO test without 'gevangenis'
+        # NOTE kan evt. 'dagen' weglaten, 'dag' matcht ook, ibid. for 'maanden'
+        # Match backslash before numbers to avoid matching "parketnummer 23/003276-17" as a bedrag
+        # {1,85} number needs to occur in a window of 85 chars after the hoofdstraf (num is empirically tuned)
+        # {0,10} short window between num and eenheid, which should follow afterwards directly
+        # this catches "gevangenisstraf van 12 (twaalf) maanden, waarvan  6 (zes) maanden voorwaardelijk met een proeftijd"!
+        # Be aware that regex { } require escapes
+        self.middle = r'\b(?P<straf>{})\b(?P<test1>[^\n\r;.]{{0,85}}?)(?P<nummer1>{}))(?P<test2>[^0-9\n\r;.]{{0,30}}?)(?P<eenheid1>{})(?P<niettest1>[^0-9\n\r;.]{{0,15}})(?:(?P<nummer2>{}))[^0-9\n\r;.]{{0,30}}?(?:\s(?P<eenheid2>{})))?'.format(self.straf, self.nummer, self.eenheid1, self.nummer, self.eenheid2)
 
-# Regex for TBS (ter beschikking stelling)
-# "ter beschikking gesteld" wordt ook voor goederen gebruikt
-# tbs = r'(?i)(?P<TBS>TBS|terbeschikkingstelling|ter beschikking (?:stelling|[^\n\r;.]*gesteld))[^\n\r;.]*(?P<type>verple(?:egd|ging)|voorwaarden)'
-# pattern_tbs = r'(?i)(?P<verlenging>verlengt|verlenging)[^\n\r;.]{0,50}(?P<TBS1>TBS|terbeschikkingstelling|ter beschikking (?:stelling|gesteld))|(?P<TBS2>TBS|terbeschikkingstelling|ter beschikking (?:stelling|(?:\w+\s)?gesteld))[^\n\r;.]{0,50}(?P<type>voorwaarden|verpleging)'
-pattern_tbs = r'(?i)(?:(?P<verlenging>verlengt|verlenging).{0,50})?(?P<TBS>TBS|terbeschikkingstelling|ter beschikking (?:wordt |is )?(?:stelling|gesteld))(?:(?!voorwaarde|verple).){0,100}(?P<type>voorwaarden|verpleging|verpleegd)?'
-# Soms wordt over de "ter beschikking gestelde" gesproken.
-# "Tegen deze beslissing kan het openbaar ministerie binnen veertien dagen na de uitspraak en de ter beschikking gestelde binnen veertien dagen na betekening daarvan beroep instellen bij het gerechtshof Arnhem-Leeuwarden"
+        # The composed pattern
+        self.pattern = r'(?i)(?:{}{})?{}(?:(?P<niettest2>{}){})?'.format(self.modifier1, self.connector, self.middle, self.connector_long, self.modifier2)
 
-regex_TBS = re.compile(pattern_tbs)
+        # Regex for TBS (ter beschikking stelling)
+        # "ter beschikking gesteld" wordt ook voor goederen gebruikt
+        # tbs = r'(?i)(?P<TBS>TBS|terbeschikkingstelling|ter beschikking (?:stelling|[^\n\r;.]*gesteld))[^\n\r;.]*(?P<type>verple(?:egd|ging)|voorwaarden)'
+        # pattern_tbs = r'(?i)(?P<verlenging>verlengt|verlenging)[^\n\r;.]{0,50}(?P<TBS1>TBS|terbeschikkingstelling|ter beschikking (?:stelling|gesteld))|(?P<TBS2>TBS|terbeschikkingstelling|ter beschikking (?:stelling|(?:\w+\s)?gesteld))[^\n\r;.]{0,50}(?P<type>voorwaarden|verpleging)'
+        self.pattern_tbs = r'(?i)(?:(?P<verlenging>verlengt|verlenging).{0,50})?(?P<TBS>TBS|terbeschikkingstelling|ter beschikking (?:wordt |is )?(?:stelling|gesteld))(?:(?!voorwaarde|verple).){0,100}(?P<type>voorwaarden|verpleging|verpleegd)?'
+        # Soms wordt over de "ter beschikking gestelde" gesproken.
+        # "Tegen deze beslissing kan het openbaar ministerie binnen veertien dagen na de uitspraak en de ter beschikking gestelde binnen veertien dagen na betekening daarvan beroep instellen bij het gerechtshof Arnhem-Leeuwarden"
 
-# Vrijspraak
-# Vaak is er vrijspraak op het ene feit, maar een straf voor het andere.
-# Ik kan ook vrijspraak als "volledige vrijspraak" identificeren, d.w.z. als er nergens een straf
-# wordt gevonden (maar dan zou ik eigenlijk ook bijkomende straffen moeten meenemen)
-# 'De verdachte wordt vrijgesproken'
-# 'Rechter beslist vrijspraak'
-# 'Rechter spreekt verdachte vrij'
-# 'wijst af de vordering van de officier van justitie'
-# 'wijst het verzoek tot wraking van mr. X af'
-# "spreekt verdachte vrij van wat meer of anders is ten laste gelegd;" (geen vrijspraak maar 'ne bis in idem'!)
+        # Vrijspraak
+        # Vaak is er vrijspraak op het ene feit, maar een straf voor het andere.
+        # Ik kan ook vrijspraak als "volledige vrijspraak" identificeren, d.w.z. als er nergens een straf
+        # wordt gevonden (maar dan zou ik eigenlijk ook bijkomende straffen moeten meenemen)
+        # 'De verdachte wordt vrijgesproken'
+        # 'Rechter beslist vrijspraak'
+        # 'Rechter spreekt verdachte vrij'
+        # 'wijst af de vordering van de officier van justitie'
+        # 'wijst het verzoek tot wraking van mr. X af'
+        # "spreekt verdachte vrij van wat meer of anders is ten laste gelegd;" (geen vrijspraak maar 'ne bis in idem'!)
 
-# We are more liberal here; do not let period block match, e.g. in ``wijst het verzoek tot wraking van mr. H.H. Dethmers af.''
-# Instead, just look within a certain window
-# Do not match ne bis in idem: 'spreekt verdachte vrij van wat meer of anders is ten laste gelegd'
-# vrijspraak = r'(?i)vrijgesproken|vrijspraak|spreekt[^.\r\n;]*\svrij|wijst[^\r\n;]{0,100}\saf'
-# Nieuw pattern with ne bis in idem exception; also more efficient with tempered greedy scope
-pattern_vrijspraak = r'(?i)(?P<vrijspraak>vrijgesproken|vrijspraak|spreekt[^.\r\n;]*\svrij|wijst[^\r\n;]{0,100}\saf)(?:(?!meer of anders).){0,50}(?P<nebisinidem>meer of anders (?:ten laste is|is ten laste) gelegd)?'
-regex_vrijspraak = re.compile(pattern_vrijspraak)
+        # We are more liberal here; do not let period block match, e.g. in ``wijst het verzoek tot wraking van mr. H.H. Dethmers af.''
+        # Instead, just look within a certain window
+        # Do not match ne bis in idem: 'spreekt verdachte vrij van wat meer of anders is ten laste gelegd'
+        # vrijspraak = r'(?i)vrijgesproken|vrijspraak|spreekt[^.\r\n;]*\svrij|wijst[^\r\n;]{0,100}\saf'
+        # Nieuw pattern with ne bis in idem exception; also more efficient with tempered greedy scope
+        self.pattern_vrijspraak = r'(?i)(?P<vrijspraak>vrijgesproken|vrijspraak|spreekt[^.\r\n;]*\svrij|wijst[^\r\n;]{0,100}\saf)(?:(?!meer of anders).){0,50}(?P<nebisinidem>meer of anders (?:ten laste is|is ten laste) gelegd)?'
+
+        # Pre-compile the regular expressions because they will be applied frequently
+        self.regex_hoofdstraf = re.compile(self.pattern)
+        self.regex_TBS = re.compile(self.pattern_tbs)
+        self.regex_vrijspraak = re.compile(self.pattern_vrijspraak)
+
+
+# ----------------------------------------------------------------------------------
 
 # Dictionaries with relevant information
 # 'uur' is special case and is not included, as it's less than a day
@@ -146,22 +154,7 @@ to_days = {'jaren': 365,
            '': 0}
 
 
-def diff_pattern(pattern_from: str, pattern_to: str):
-    '''
-    Utility function that shows how to change one pattern into another
-    Useful for comparing two regular expressions.
-    '''
-    print('{}\n=>\n{}'.format(pattern_from, pattern_to))
-    for i, s in enumerate(difflib.ndiff(pattern_from, pattern_to)):
-        if s[0] == ' ':
-            continue
-        elif s[0] == '-':
-            print(u'Delete "{}" from position {}'.format(s[-1], i))
-        elif s[0] == '+':
-            print(u'Add "{}" to position {}'.format(s[-1], i))
-
-
-def label_hoofdstraf(beslissing: str):
+def label_hoofdstraf(pp: PunishmentPattern, beslissing: str):
     '''
     This function takes a input string which may contain multiple punishments.
     Output is a vector of the following shape:
@@ -184,7 +177,7 @@ def label_hoofdstraf(beslissing: str):
     # 5. 78.000 euro
     # 6. 780.000 euro
 
-    matches = regex_hoofdstraf.finditer(beslissing)  # returns match objects
+    matches = pp.regex_hoofdstraf.finditer(beslissing)  # returns match objects
 
     # Map all forms of hoofdstraffen on these keys!
     labels = ('TBS', 'gevangenisstraf', 'hechtenis', 'taakstraf', 'geldboete', 'vrijspraak')
@@ -434,7 +427,7 @@ def label_hoofdstraf(beslissing: str):
     # Convert community service from hours to days
     straf_vector['taakstraf'] = math.ceil(straf_vector['taakstraf'] / 24)
 
-    for match in regex_TBS.finditer(beslissing):
+    for match in pp.regex_TBS.finditer(beslissing):
         verlenging = match['verlenging']
         # tbs1 = match['TBS1']  # Corresponds to verlenging
         # tbs2 = match['TBS2']  # Correspondings to new TBS with type indication
@@ -455,7 +448,7 @@ def label_hoofdstraf(beslissing: str):
         # that says something about the duration?
         straf_vector['TBS'] = 1
 
-    for match in regex_vrijspraak.finditer(beslissing):
+    for match in pp.regex_vrijspraak.finditer(beslissing):
         print("MATCH VRIJSPRAAK:", match.group(0))
         if match['nebisinidem']:
         # TODO The following ne bis in idem is not caught
@@ -524,7 +517,7 @@ def pick_highest_from_vector(straf_vector: tuple):
     return 'nan', 0
 
 
-def extract_all_punishment_vectors(df, data_column='data'):
+def extract_all_punishment_vectors(pp: PunishmentPattern, df: pd.DataFrame, data_column='data'):
     # Require a 'type' column, because only "beslissing", and ... are relevant for labelling
     beslissingen = df.loc[df['type'] == 'beslissing'][data_column]
     # wetten = df[ df['articles'] ]
@@ -541,7 +534,7 @@ def extract_all_punishment_vectors(df, data_column='data'):
         print("Case:", beslissingen.index[i])
         print("---------------------------------------------")
         try:
-            straf_vector = label_hoofdstraf(beslissing)
+            straf_vector = label_hoofdstraf(pp, beslissing)
             # straf_vector = np.array(straf_vector, dtype='object')
             straf, duur = pick_highest_from_vector(straf_vector)
         # Still throw error, but find out in which case the problem occurs
@@ -563,14 +556,21 @@ def extract_all_punishment_vectors(df, data_column='data'):
     return df
 
 
+# https://regex101.com/r/6fbiBD/12
+# NOTE I use this for regex development
+# 1. Develop pattern in an online regex tester
+# 2. Paste full pattern here
+# 3. Diff with the compiled version of the pattern to make sure both versions are up to date
+PATTERN_FULL = r'(?i)(?:(?P<modifier1>voorwaardelijk|proeftijd|niet|vervangend|indien|mindering|maatregel)[^\n\r;.]{0,100})?\b(?P<straf>gevangenis|gevangenisstraf|jeugddetentie|detentie|hechtenis|taakstraf|werkstraf|leerstraf|geldboete|vordering(?!\stenuitvoerlegging)(?!\stot\stenuitvoerlegging)|betaling)\b(?P<test1>[^\n\r;.]{0,85}?)(?P<nummer1>(?<!feit )\d+(?!\s?\]))(?P<test2>[^0-9\n\r;.]{0,30}?)(?P<eenheid1>jaar|jaren|maanden|maand|week|weken|dag|dagen|uur|uren|euro|,[-\d=]{1,2}|(?:\/|-|:)?[\d.]+(?!\s?\])(?:,[-\d=]{1,2})?)(?P<niettest1>[^0-9\n\r;.]{0,15})(?:(?P<nummer2>(?<!feit )\d+(?!\s?\]))[^0-9\n\r;.]{0,30}?(?:\s(?P<eenheid2>jaar|jaren|maanden|maand|week|weken|dagen|dag|uur|uren)))?(?:(?P<niettest2>[^\n\r;.]{0,150})(?P<modifier2>voorwaardelijk|proeftijd|niet|vervangend|indien|hechtenis|wederrechtelijk))?'
+
+
 if __name__ == '__main__':
     '''
     This script can also be used stand-alone with some parameters.
     '''
 
     # Default values
-    # It is assumed the csv is the result from the query + parsing steps
-    # See pipeline.py
+    # It is assumed the csv is the result from the query + parsing steps, see pipeline.py
     data_fn = 'parsed_data.csv'
     data_dir = './data/query/'
 
@@ -593,11 +593,27 @@ if __name__ == '__main__':
     # Check which articles of law are cited in the corpus
     print(utils.check_articles(df))
 
+    # Compile the regex patterns used for extracting punishments
+    pp = PunishmentPattern()
+
+    # Check whether the structured regex is the same to the full regex after formatting
+    diff_pattern(pp.pattern, PATTERN_FULL)
+
     # Set this flag if you only want to check and debug some specific cases and test cases
     if not DEBUG:
         # df = label_all_beslissingen(df)
-        df = extract_all_punishment_vectors(df)
+        df = extract_all_punishment_vectors(pp, df)
         df.to_csv(dataloader.data_path)
     else:
         print("DEBUG MODE ENABLED.")
+        print("Running tests...")
+        # NOTE this delayed import is a quick fix because I have a circular import between
+        # this script and eval_punishment_extraction
+        # TODO make a proper unit test for this?
+        from src.eval_punishment_extraction import test_cases, manual_eval_random_cases
 
+        # Run the pattern on a set of tests
+        test_cases(pp)
+
+        # Select random cases for manual validation
+        manual_eval_random_cases(df, pp, seed=2021)

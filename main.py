@@ -1,7 +1,7 @@
 import os
 import hydra
 from omegaconf import DictConfig, OmegaConf
-from src.pipeline import pipeline
+from src.pipeline import run_pipeline
 
 
 @hydra.main(config_path="config", config_name="config")
@@ -25,7 +25,7 @@ def main(config: DictConfig) -> None:
     print(f"Hydra working directory: {os.getcwd()}")
 
     # Pipeline
-    pipeline(config)
+    run_pipeline(config)
 
 
 if __name__ == "__main__":
