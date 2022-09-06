@@ -8,12 +8,8 @@ from src.pipeline import run_pipeline
 def main(config: DictConfig) -> None:
     # Delayed import for tab completion, see here: https://github.com/facebookresearch/hydra/issues/934
     from src import utils
-    # A couple of optional utilities:
-    # - disabling python warnings
+    # Load optional utilities:
     # - easier access to debug mode
-    # - forcing debug friendly configuration
-    # - forcing multi-gpu friendly configuration
-    # You can safely get rid of this line if you don't want those
     utils.extras(config)
 
     # Pretty print config using Rich library

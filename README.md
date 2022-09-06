@@ -13,11 +13,15 @@ When running the pipeline, a query will be submitted to the ECLI-index of rechts
 This returns an atom XML feed with European Case Law Identifiers (ECLI) of cases matching the query.
 A large set of queries are then submitted to retrieve the case transcriptions in XML format.
 *This may take a while depending on your query!*
+
 The raw XML files will be stored in a data directory that is automatically created.
 The `CaseParser` consequently parses the XML files, extracts information, and stores the results in a CSV file.
 This CSV can be used for several downstream AI, data science, and machine learning applications.
+
 By default, a data set is created on the section level, where each section is annotated with its role in the overall case transcription.
 For sections where the role is "beslissing" (i.e. the case decision) we additionally extract all punishments that are imposed in that decision section, *including their height*, as a multidimensional vector.
+
+TODO explain logging.
 
 ## Configuration
 
@@ -38,6 +42,8 @@ These options can be freely combined:
 
 `python main.py skip_query=true caseparser.skip=true`.
 
+TODO explain debug mode.
+
 
 ## TODO Explanation of the case parser
 
@@ -45,3 +51,13 @@ These options can be freely combined:
 - Extended explanation of the used regular expressions
     * Render a separate PDF of the appendix and refer to it here
 - How to run test cases (make a proper test file)
+
+## Evaluation
+
+The performance of the punishment extraction is manually evaluated on the following randomly selected cases from 2021:
+
+```
+ECLI:NL:RBAMS:2021:2514, ECLI:NL:RBAMS:2021:7026, ECLI:NL:RBAMS:2021:765, ECLI:NL:RBGEL:2021:2304, ECLI:NL:RBGEL:2021:3033, ECLI:NL:RBGEL:2021:4518, ECLI:NL:RBGEL:2021:6569, ECLI:NL:RBGEL:2021:6833, ECLI:NL:RBLIM:2021:5488, ECLI:NL:RBLIM:2021:5570, ECLI:NL:RBMNE:2021:5182, ECLI:NL:RBNNE:2021:2888, ECLI:NL:RBOVE:202, ECLI:NL:RBOVE:2021:1784, ECLI:NL:RBOVE:2021:2379, ECLI:NL:RBOVE:2021:3523, ECLI:NL:RBOVE:2021:3609, ECLI:NL:RBOVE:2021:4172, ECLI:NL:RBOVE:2021:4354, ECLI:NL:RBOVE:2021:4510, ECLI:NL:RBOVE:2021:606, ECLI:NL:RBOVE:2021:643, ECLI:NL:RBOVE:2021:75, ECLI:NL:RBROT:2021:1932, ECLI:NL:RBROT:2021:2039, ECLI:NL:RBROT:2021:4354, ECLI:NL:RBROT:2021:7766, ECLI:NL:RBROT:2021:8751, ECLI:NL:RBROT:2021:8814, ECLI:NL:RBROT:2021:8835, ECLI:NL:RBROT:2021:9086, ECLI:NL:RBROT:2021:9706, ECLI:NL:RBZWB:2021:3656, ECLI:NL:RBZWB:2021:3658, ECLI:NL:RBZWB:2021:6216
+```
+
+The manual evaluation results can be found [here TOOD](TODO).
