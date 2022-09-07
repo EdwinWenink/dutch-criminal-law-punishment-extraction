@@ -47,7 +47,7 @@ TODO explain debug mode.
 
 ## Used regular expressions
 
-See the [supplementary materials](./docs/supplementary.tex) for an explanation of the used regular expressions, a walkthrough of several test cases, and a brief failure analysis.
+See the [supplementary materials](./docs/supplementary.pdf) for an explanation of the used regular expressions, a walkthrough of several test cases, and a brief failure analysis.
 
 
 ## Evaluation
