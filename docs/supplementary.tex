@@ -313,7 +313,7 @@ Because the ``ne bis in idem'' clause is optional, it is necessary to temper the
 This avoid that the construct \texttt{.{0,50}} expands over the optional group and never matches it, even if it is present.
 This construct is also used in the regular expression for TBS.
  
-\subsubsection{Test cases}\label{sec:strafmaat_test_cases}
+\subsection{Test cases}\label{sec:strafmaat_test_cases}
 
 To provide insight into the behavior of the regular expressions and the rule-based classifier defined on the matches, we provide test cases that represent several scenarios.
 A full suite of tests can be found in the code repository.
@@ -576,7 +576,7 @@ OUT: \{'TBS': 0, 'gevangenisstraf': 0, 'hechtenis': 0, 'taakstraf': 0, 'geldboet
 %MATCH TAAKSTRAF: taakstraf niet ten uitvoer zal worden gelegd, tenzij verdachte zich voor het einde van de op 2 (twee) jaren gestelde proef
 %WARNING: community service has to be specified in hours or days. Skipped!
 
-\subsubsection{Punishment vector failure analysis}\label{sec:strafmaat_failure_analysis}
+\subsection{Failure analysis}\label{sec:failure_analysis}
 
 Regular expressions are surprisingly effective for extracting the sentences from case decisions because juridical language use is relatively structured.
 There are however some exceptions that the regular expressions do not capture.
