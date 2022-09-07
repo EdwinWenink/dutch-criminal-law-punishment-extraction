@@ -130,3 +130,11 @@ dmypy.json
 
 # Vim swap files
 *.swp
+
+# LaTeX compilation stuff
+*.aux
+*latexmk
+*.fls
+*.out
+*.synctex.gz
+*.toc

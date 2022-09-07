@@ -45,12 +45,10 @@ These options can be freely combined:
 TODO explain debug mode.
 
 
-## TODO Explanation of the case parser
+## Used regular expressions
 
-- Parsing steps and rules
-- Extended explanation of the used regular expressions
-    * Render a separate PDF of the appendix and refer to it here
-- How to run test cases (make a proper test file)
+See the [supplementary materials](./docs/supplementary.tex) for an explanation of the used regular expressions, a walkthrough of several test cases, and a brief failure analysis.
+
 
 ## Evaluation
 
@@ -60,4 +58,7 @@ The performance of the punishment extraction is manually evaluated on the follow
 ECLI:NL:RBAMS:2021:2514, ECLI:NL:RBAMS:2021:7026, ECLI:NL:RBAMS:2021:765, ECLI:NL:RBGEL:2021:2304, ECLI:NL:RBGEL:2021:3033, ECLI:NL:RBGEL:2021:4518, ECLI:NL:RBGEL:2021:6569, ECLI:NL:RBGEL:2021:6833, ECLI:NL:RBLIM:2021:5488, ECLI:NL:RBLIM:2021:5570, ECLI:NL:RBMNE:2021:5182, ECLI:NL:RBNNE:2021:2888, ECLI:NL:RBOVE:202, ECLI:NL:RBOVE:2021:1784, ECLI:NL:RBOVE:2021:2379, ECLI:NL:RBOVE:2021:3523, ECLI:NL:RBOVE:2021:3609, ECLI:NL:RBOVE:2021:4172, ECLI:NL:RBOVE:2021:4354, ECLI:NL:RBOVE:2021:4510, ECLI:NL:RBOVE:2021:606, ECLI:NL:RBOVE:2021:643, ECLI:NL:RBOVE:2021:75, ECLI:NL:RBROT:2021:1932, ECLI:NL:RBROT:2021:2039, ECLI:NL:RBROT:2021:4354, ECLI:NL:RBROT:2021:7766, ECLI:NL:RBROT:2021:8751, ECLI:NL:RBROT:2021:8814, ECLI:NL:RBROT:2021:8835, ECLI:NL:RBROT:2021:9086, ECLI:NL:RBROT:2021:9706, ECLI:NL:RBZWB:2021:3656, ECLI:NL:RBZWB:2021:3658, ECLI:NL:RBZWB:2021:6216
 ```
 
-The manual evaluation results can be found [here TOOD](TODO).
+TODO
+
+- The manual evaluation results can be found [here TOOD](TODO).
+- How to run test cases (make a proper test file)
