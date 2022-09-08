@@ -49,6 +49,37 @@ TODO explain debug mode.
 
 See the [supplementary materials](./docs/supplementary.pdf) for an explanation of the used regular expressions, a walkthrough of several test cases, and a brief failure analysis.
 
+## Procedure types
+
+We only study cases of courts of first instance, i.e. cases where a sentence is imposed for the first time on a suspect, given a set of charges.
+We exclude cases dealing with various legal requests that do not directly involve the determination of punishments for criminal facts.
+
+Included:
+
+- Eerste aanleg - meervoudig
+- Eerste aanleg - enkelvoudig
+- Eerste en enige aanleg
+- Mondelinge uitspraak
+- Proces-verbaal
+- Tussenuitspraak
+
+Excluded:
+
+- Artikel 80a RO-zaken          
+- Artikel 81 RO-zaken
+- Beschikking
+- Beslissing RC                 
+- Cassatie
+- Cassatie in het belang der wet
+- Herroeping                    
+- Herziening                    
+- Hoger beroep
+- Hoger beroep kort geding      
+- Rekestprocedure               
+- Tussenbeschikking             
+- Verschoning                   
+- Verzet                        
+- Wraking
 
 ## Evaluation
 
@@ -62,3 +93,4 @@ TODO
 
 - The manual evaluation results can be found [here TOOD](TODO).
 - How to run test cases (make a proper test file)
+

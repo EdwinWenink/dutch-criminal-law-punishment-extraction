@@ -16,7 +16,7 @@ class CaseParser:
     as requested through RESTful API from rechtspraak.nl
     '''
 
-    def __init__(self, data_key='data', level='section', include_section_titles=False, exclude_procedures=[]):
+    def __init__(self, data_key='data', level='section', include_section_titles=True, include_procedures=[]):
         '''
         params:
 
@@ -39,7 +39,7 @@ class CaseParser:
         # TODO maybe add self.data_dir? Take into account the case xmls may be in a sub folder
         self.include_section_titles = include_section_titles
         self.level = level
-        self.exclude_procedures = exclude_procedures
+        self.include_procedures = include_procedures
 
     def get_raw_text(self, results):
         '''
@@ -89,7 +89,7 @@ class CaseParser:
         procedure = description.procedure.text.strip()
 
         # Do not parse case if it's of a procedure in the exclude list
-        if procedure in self.exclude_procedures:
+        if procedure not in self.include_procedures:
             log.info(f"Skipping {ECLI} ({procedure})")
             return None, None, None, None
 
@@ -782,20 +782,19 @@ class CaseParser:
 
 if __name__ == '__main__':
 
-    case_dir = 'data/new/query_last_year/cases/'
-    # case_dir = 'data/new/query_test/cases/'
+    case_dir = 'data/query/cases/'
     level = 'section'  # 'paragraph'
     # When False, you'll have slightly more empty columns,
     # meaning that some sections only have a title
     include_section_titles = True
-    # include_section_titles = False
-    exclude_procedures = ['Hoger beroep', 'Cassatie', 'Cassatie in het belang der wet',
-                          'Raadkamer', 'Artikel 81 RO-zaken', 'Wraking', 'Beschikking']
+
+    include_procedures = ['Eerste aanleg - meervoudig', 'Op tegenspraak', 'Eerste aanleg - enkelvoudig',
+                          'Proces-verbaal', 'Tussenuitspraak', 'Mondelinge uitspraak']
 
     parser = CaseParser(data_key='data',
                         level=level,
                         include_section_titles=include_section_titles,
-                        exclude_procedures=exclude_procedures)
+                        include_procedures=include_procedures)
 
     # Parse the returned cases
     df = parser.parse_all_cases(case_dir, write_case_text=False)
@@ -803,12 +802,5 @@ if __name__ == '__main__':
     parser.inspect_overig_labels(df)  # NOTE Do this with level='section'!
 
     # To csv
-    with open('data/new/parsed_data.csv', encoding='utf-8', mode='w') as f:
+    with open('data/query/parsed_data.csv', encoding='utf-8', mode='w') as f:
         df.to_csv(f)
-
-
-# Soms is er een "grondslag van het geschil" zonder role-identifier
-
-# TODO parsen relevante wetsartikelen en verwijzingen
-
-# TODO Dataset samenvoegen met classificatie van type vergrijp?

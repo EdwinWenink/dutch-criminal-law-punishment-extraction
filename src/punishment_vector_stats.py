@@ -37,6 +37,7 @@ df = dataloader.load(drop_columns=drop_columns,
 
 # First do analysis on 'beslissingen' only
 beslissingen = df.loc[df['type'] == 'beslissing']
+print("N beslissingen: ", len(beslissingen))
 
 # Read out the labels (tuples saved as 'strings') and convert to numpy array
 straf_labels = np.array([eval(straf) for straf in beslissingen['straffen']])
