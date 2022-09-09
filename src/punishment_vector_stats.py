@@ -5,9 +5,15 @@ import matplotlib.pyplot as plt
 from scipy.stats import rankdata, spearmanr, kendalltau
 from src.dataloader import DataLoader
 from src.utils import convert_vectors_to_binary
+from pathlib import Path
 
 label_names_dutch = ['TBS', 'gevangenis', 'hechtenis', 'taakstraf', 'geldboete', 'vrijspraak']
 label_names = ['TBS', 'prison sentence', 'custody', 'community service', 'fine', 'acquittal']
+
+# Show plots and/or save plots?
+show = False
+save = True
+plots_dir = Path('plots/')
 
 # Threshold for significance
 p_thresh = 0.05
@@ -81,55 +87,63 @@ ax = sns.countplot(x=straf_labels[:, 0])
 ax.set_xlabel("No/Yes")
 ax.set_ylabel("Counts")
 plt.title("Counts for TBS")
-plt.show()
+plt.tight_layout()
+if show: plt.show()
+if save: plt.savefig(plots_dir / 'hist_TBS.png', bbox_inches='tight')
+plt.close()
 
 # Gevangenisstraf
 ax = sns.histplot(x=straf_labels[:, 1], binrange=(1, max(straf_labels[:, 1])), kde=True)
 ax.set_xlabel("Days")
 ax.set_ylabel("Counts")
 plt.title("Histogram for prison sentence (excl. zero)")
-plt.show()
+plt.tight_layout()
+if show: plt.show()
+if save: plt.savefig(plots_dir / 'hist_prison.png', bbox_inches='tight')
+plt.close()
 
 # Hechtenis
 ax = sns.histplot(x=straf_labels[:, 2], binwidth=25, binrange=(1, max(straf_labels[:, 2])), kde=True)
 ax.set_xlabel("Days")
 ax.set_ylabel("Counts")
 plt.title("Histogram for custody (excl. zero)")
-plt.show()
+plt.tight_layout()
+if show: plt.show()
+if save: plt.savefig(plots_dir / 'hist_custody.png', bbox_inches='tight')
+plt.close()
 
 # Taakstraf
-# Outliers:
-# 738: ECLI:NL:RBAMS:2021:7066
-# 25: ECLI:NL:RBNNE:2021:3376
-# 13: ECLI:NL:RBZWB:2021:6511
-# 12: ECLI:NL:RBGEL:2021:4230
-# 11: ECLI:NL:RBAMS:2021:7624 ; ECLI:NL:RBGEL:2021:1200
 ax = sns.countplot(x=straf_labels[np.nonzero(straf_labels[:, 3])][:, 3])
 ax.set_xlabel("Days")
 ax.set_ylabel("Counts")
 plt.title("Counts for community service (excl. zero)")
-plt.show()
+plt.tight_layout()
+if show: plt.show()
+if save: plt.savefig(plots_dir / 'hist_community_service.png', bbox_inches='tight')
+plt.close()
 
 # Geldboete
-# Outliers:
-# 8215446: ECLI:NL:RBOVE:2021:1983
-# 1700000: ECLI:NL:RBZWB:2021:2862
-# 500239: ECLI:NL:RBZWB:2021:2861
-# ax = sns.histplot(x=straf_labels[:, 4], binrange=(1, max(straf_labels[:, 4])), kde=True)
 ax = sns.histplot(x=straf_labels[:, 4], binrange=(1, 900000), kde=True)
 ax.set_xlabel("Euros")
 ax.set_ylabel("Counts")
 plt.title("Histogram for fine (excl. zero)")
-plt.show()
+plt.tight_layout()
+if show: plt.show()
+if save: plt.savefig(plots_dir / 'hist_fine.png', bbox_inches='tight')
+plt.close()
 
 # Vrijspraak
 ax = sns.countplot(x=straf_labels[:, 5])
 ax.set_xlabel("No/Yes")
 ax.set_ylabel("Counts")
 plt.title("Counts for acquittal")
-plt.show()
+plt.tight_layout()
+if show: plt.show()
+if save: plt.savefig(plots_dir / 'hist_acquittal.png', bbox_inches='tight')
+plt.close()
 
 # How many cases are acquittal without other main punishments?
+print("Acquittal without other co-occuring punishments.")
 print(np.sum(np.sum(straf_labels[straf_labels[:, 5] == 1], axis=1) == 1))  # 483/2301 cases with vrijspraak=1
 
 # CO-OCCURRENCE MATRIX
@@ -153,7 +167,9 @@ ax = sns.heatmap(co_occurrence,
                  yticklabels=label_names, center=0, square=True, linewidth=.5)
 plt.title("Co-occurrence matrix of punishments.")
 plt.tight_layout()
-plt.show()
+if show: plt.show()
+if save: plt.savefig(plots_dir / 'co_occurrence.png', bbox_inches='tight')
+plt.close()
 
 # Normalize co-occurrence matrix entries i,j by popularity of i and j
 # i.e. (i and j) / (i or j) -> This is effectively the Jaccard similarity!
@@ -174,11 +190,13 @@ cmap = sns.diverging_palette(20, 230, as_cmap=True)
 ax = sns.heatmap(co_occurrence_norm,
                  cmap=cmap,
                  annot=True, xticklabels=label_names,
-                 fmt='.2f',  # do not use scientific notation
+                 fmt='.3f',  # do not use scientific notation
                  yticklabels=label_names, center=0, square=True, linewidth=.5)
 plt.title("Co-occurrence matrix of punishments normalized by popularity (Jaccard index).")
 plt.tight_layout()
-plt.show()
+if show: plt.show()
+if save: plt.savefig(plots_dir / 'co_occurrence_norm.png', bbox_inches='tight')
+plt.close()
 
 tbs = straf_labels[:, 0]
 gevangenis = straf_labels[:, 1]
@@ -235,7 +253,7 @@ ax = sns.heatmap(spearman_corr, mask=mask, cmap=cmap, annot=True, xticklabels=la
                  yticklabels=label_names, center=0, square=True, linewidth=.5)
 plt.title("Spearman's Rho on continuous punishment labels")
 plt.tight_layout()
-plt.show()
+if show: plt.show()
 
 # Repeat analysis on binary version of the labels
 spearman_corr_bin, spearman_p_bin = spearmanr(straf_labels_bin)
@@ -255,7 +273,7 @@ ax = sns.heatmap(spearman_corr_bin, mask=mask, cmap=cmap, annot=True, xticklabel
 
 plt.title("Spearman's Rho on binary punishment labels")
 ax.figure.tight_layout()
-plt.show()
+if show: plt.show()
 
 # PAIRWISE CORRELATIONS ON NON-ZERO PAIRS
 # ---------------------------------------
