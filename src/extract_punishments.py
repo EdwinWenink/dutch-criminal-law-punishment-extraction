@@ -130,7 +130,7 @@ class PunishmentPattern():
         # Do not match ne bis in idem: 'spreekt verdachte vrij van wat meer of anders is ten laste gelegd'
         # vrijspraak = r'(?i)vrijgesproken|vrijspraak|spreekt[^.\r\n;]*\svrij|wijst[^\r\n;]{0,100}\saf'
         # Nieuw pattern with ne bis in idem exception; also more efficient with tempered greedy scope
-        self.pattern_vrijspraak = r'(?i)(?P<vrijspraak>vrijgesproken|vrijspraak|spreekt[^.\r\n;]*\svrij|wijst[^\r\n;]{0,100}\saf)(?:(?!meer of anders).){0,50}(?P<nebisinidem>meer of anders (?:ten laste is|is ten laste) gelegd)?'
+        self.pattern_vrijspraak = r'(?i)((?P<nebisinidem1>meer of anders (?:ten laste is gelegd|is ten laste gelegd|is tenlastegelegd|tenlastegelegd is)).{0,50})?(?P<vrijspraak>vrijgesproken|vrijspraak|spreekt[^.\r\n;]*\svrij|wijst[^\r\n;]{0,100}\saf)(?:(?!meer of anders).){0,50}(?P<nebisinidem2>meer of anders (?:ten laste is gelegd|is ten laste gelegd|is tenlastegelegd|tenlastegelegd is))?'
 
         # Pre-compile the regular expressions because they will be applied frequently
         self.regex_hoofdstraf = re.compile(self.pattern)
@@ -169,7 +169,7 @@ def label_hoofdstraf(pp: PunishmentPattern, beslissing: str):
     returns:    ('TBS', 'gevangenisstraf', 'hechtenis', 'taakstraf', 'geldboete', 'vrijspraak')
     '''
 
-    # NOTE Bij geldboetes kan ik ze ook in categorieen opdelen
+    # NOTE another idea is to output the fine category (determined in criminal law)
     # 1. 390 euro
     # 2. 3.900 euro
     # 3. 7.800 euro
@@ -443,16 +443,12 @@ def label_hoofdstraf(pp: PunishmentPattern, beslissing: str):
             print("WARNING: neither 'verlenging' nor 'type' of TBS detected. Skipped.")
             continue
 
-        # NOTE it doesn't seem to make sense to match a duration, because TBS is often
-        # imposed without duration. Or is there always an accompanying prison sentence
-        # that says something about the duration?
+        # NOTE it doesn't seem to make sense to match a duration, because TBS is imposed without predefined duration.
         straf_vector['TBS'] = 1
 
     for match in pp.regex_vrijspraak.finditer(beslissing):
         print("MATCH VRIJSPRAAK:", match.group(0))
-        if match['nebisinidem']:
-        # TODO The following ne bis in idem is not caught
-        # "Verklaart niet bewezen hetgeen aan verdachte meer of anders is ten laste gelegd dan hiervoor is bewezen verklaard en **spreekt verdachte daarvan vrij**"
+        if match['nebisinidem1'] or match['nebisinidem2']:
             print("'ne bis in idem' detected. Skipped.")
             continue
 
@@ -609,11 +605,23 @@ if __name__ == '__main__':
         print("Running tests...")
         # NOTE this delayed import is a quick fix because I have a circular import between
         # this script and eval_punishment_extraction
-        # TODO make a proper unit test for this?
         from src.eval_punishment_extraction import test_cases, manual_eval_random_cases
 
         # Run the pattern on a set of tests
         test_cases(pp)
 
+        # old_val_ECLIs = ['ECLI:NL:RBROT:2021:8835', 'ECLI:NL:RBROT:2021:8814', 'ECLI:NL:RBGEL:2021:4518', 'ECLI:NL:RBZWB:2021:3658', 'ECLI:NL:RBOVE:2021:4510', 'ECLI:NL:RBOVE:2021:3609', 'ECLI:NL:RBOVE:2021:75', 'ECLI:NL:RBNNE:2021:2888', 'ECLI:NL:RBOVE:2021:2379', 'ECLI:NL:RBROT:2021:2039', 'ECLI:NL:RBGEL:2021:3033', 'ECLI:NL:RBROT:2021:8751', 'ECLI:NL:RBAMS:2021:7026', 'ECLI:NL:RBOVE:2021:4354', 'ECLI:NL:RBLIM:2021:5488', 'ECLI:NL:RBGEL:2021:6833', 'ECLI:NL:RBOVE:2021:1784', 'ECLI:NL:RBGEL:2021:6569', 'ECLI:NL:RBROT:2021:7766', 'ECLI:NL:RBGEL:2021:2304', 'ECLI:NL:RBOVE:2021:643', 'ECLI:NL:RBOVE:2021:4172', 'ECLI:NL:RBAMS:2021:765', 'ECLI:NL:RBZWB:2021:6216', 'ECLI:NL:RBZWB:2021:3656']
+
+        # NOTE 'ECLI:NL:RBOVE:202', was in this list but is not a valid ECLI... what happened here? Can I find it back?
+        # Replaced with randomly selected case: 'ECLI:NL:RBOVE:2021:1717'
+
+        old_val_ECLIs = ['ECLI:NL:RBAMS:2021:2514', 'ECLI:NL:RBAMS:2021:7026', 'ECLI:NL:RBAMS:2021:765', 'ECLI:NL:RBGEL:2021:2304', 'ECLI:NL:RBGEL:2021:3033', 'ECLI:NL:RBGEL:2021:4518', 'ECLI:NL:RBGEL:2021:6569', 'ECLI:NL:RBGEL:2021:6833', 'ECLI:NL:RBLIM:2021:5488', 'ECLI:NL:RBLIM:2021:5570', 'ECLI:NL:RBMNE:2021:5182', 'ECLI:NL:RBNNE:2021:2888', 'ECLI:NL:RBOVE:2021:1717', 'ECLI:NL:RBOVE:2021:1784', 'ECLI:NL:RBOVE:2021:2379', 'ECLI:NL:RBOVE:2021:3523', 'ECLI:NL:RBOVE:2021:3609', 'ECLI:NL:RBOVE:2021:4172', 'ECLI:NL:RBOVE:2021:4354', 'ECLI:NL:RBOVE:2021:4510', 'ECLI:NL:RBOVE:2021:606', 'ECLI:NL:RBOVE:2021:643', 'ECLI:NL:RBOVE:2021:75', 'ECLI:NL:RBROT:2021:1932', 'ECLI:NL:RBROT:2021:2039', 'ECLI:NL:RBROT:2021:4354', 'ECLI:NL:RBROT:2021:7766', 'ECLI:NL:RBROT:2021:8751', 'ECLI:NL:RBROT:2021:8814', 'ECLI:NL:RBROT:2021:8835', 'ECLI:NL:RBROT:2021:9086', 'ECLI:NL:RBROT:2021:9706', 'ECLI:NL:RBZWB:2021:3656', 'ECLI:NL:RBZWB:2021:3658', 'ECLI:NL:RBZWB:2021:6216']
+
+        # If zero, we run evaluation only on the manually provided lists of ECLIs
+        n_samples = 0
+
+        # Where to store the file for manual evaluation
+        fn_out = 'experiments/evaluate_strafmaat.md'
+
         # Select random cases for manual validation
-        manual_eval_random_cases(df, pp, seed=2021)
+        manual_eval_random_cases(df, pp, seed=2021, fn_out=fn_out, old_val_ECLIs=old_val_ECLIs, n_samples=n_samples)

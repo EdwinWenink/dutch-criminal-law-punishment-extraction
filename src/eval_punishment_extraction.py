@@ -89,11 +89,17 @@ tests = [
     # Boete met vervangende hechtenis
     ('hechtenis heeft doorgebracht naar rato van 50 euro per dag', (0, 0, 0, 0, 0, 0)),
 
-
     # Vrijspraak
     ('spreekt de verdachte daarvan vrij', (0, 0, 0, 0, 0, 1)),
     ('wijst de vordering van de benadeelde partij voor het overige af', (0, 0, 0, 0, 0, 1)),
-    ('- verklaart het ten laste gelegde bewezen, zodanig als hierboven onder 4.4 is omschreven; - spreekt verdachte vrij van wat meer of anders is ten laste gelegd;', (0, 0, 0, 0, 0, 0)),  # ne bis in idem; do not match
+
+    # Ne bis in idem (should not match vrijspraak)
+    ('- verklaart het ten laste gelegde bewezen, zodanig als hierboven onder 4.4 is omschreven; - spreekt verdachte vrij van wat meer of anders is ten laste gelegd;', (0, 0, 0, 0, 0, 0)),
+    ('verklaart niet bewezen hetgeen aan de verdachte meer of anders ten laste is gelegd dan hiervoor bewezen is verklaard en spreekt de verdachte daarvan vrij;', (0, 0, 0, 0, 0, 0)),
+    ('verklaart niet bewezen wat aan verdachte meer of anders is ten laste gelegd en **spreekt hem daarvan vrij**;', (0, 0, 0, 0, 0, 0)),
+    ('verklaart niet bewezen wat aan verdachte primair meer of anders is ten laste gelegd en **spreekt hem daarvan vrij;**', (0, 0, 0, 0, 0, 0)),
+    ('verklaart niet bewezen hetgeen verdachte meer of anders is ten laste gelegd dan hierboven bewezen is verklaard en **spreekt verdachte daarvan vrij**;', (0, 0, 0, 0, 0, 0)),
+    ('Hetgeen meer of anders is ten laste gelegd is niet bewezen. De verdachte moet daarvan worden vrijgesproken', (0, 0, 0, 0, 0, 0)),
 
     # TBS
     ('is het hof tevens van oordeel dat de algemene veiligheid van personen het opleggen van een TBS-maatregel met bevel tot verpleging van overheidswege eist.', (1, 0, 0, 0, 0, 0)),
@@ -196,50 +202,67 @@ def check_outliers():
 
 def manual_eval_random_cases(df: pd.DataFrame, pp: PunishmentPattern,
                              seed=2021,
-                             fn_out='experiments/evaluate_strafmaat.md',
-                             old_val_ECLIds=None):
+                             fn_out='docs/evaluate_strafmaat.md',
+                             old_val_ECLIs=None,
+                             n_samples=25):
     '''
     Select random decisions, extract punishments, and write them out to a file for manual validation.
 
     seed:               seed to use for manual validation
     pp:                 PunishmentPattern instance
     fn_out:             filepath where results are written to
-    old_val_ECLIds:     if you have previous evaluation results you want to still include,
-                        you can submit a manual list of their case ECLIds
+    old_val_ECLIs:      if you have previous evaluation results you want to still include,
+                        you can submit a manual list of their case ECLIs
     '''
 
-    # I've changed this data set in the meantime (no impact on eval though), so here is a manual list of the original validation cases
-    # NOTE Hardcoded
-    if not old_val_ECLIds:
-        old_val_ECLIds = ['ECLI:NL:RBROT:2021:8835', 'ECLI:NL:RBROT:2021:8814', 'ECLI:NL:RBGEL:2021:4518', 'ECLI:NL:RBZWB:2021:3658', 'ECLI:NL:RBOVE:2021:4510', 'ECLI:NL:RBOVE:2021:3609', 'ECLI:NL:RBOVE:2021:75', 'ECLI:NL:RBNNE:2021:2888', 'ECLI:NL:RBOVE:2021:2379', 'ECLI:NL:RBROT:2021:2039', 'ECLI:NL:RBGEL:2021:3033', 'ECLI:NL:RBROT:2021:8751', 'ECLI:NL:RBAMS:2021:7026', 'ECLI:NL:RBOVE:2021:4354', 'ECLI:NL:RBLIM:2021:5488', 'ECLI:NL:RBGEL:2021:6833', 'ECLI:NL:RBOVE:2021:1784', 'ECLI:NL:RBGEL:2021:6569', 'ECLI:NL:RBROT:2021:7766', 'ECLI:NL:RBGEL:2021:2304', 'ECLI:NL:RBOVE:2021:643', 'ECLI:NL:RBOVE:2021:4172', 'ECLI:NL:RBAMS:2021:765', 'ECLI:NL:RBZWB:2021:6216', 'ECLI:NL:RBZWB:2021:3656']
-
     beslissingen = df.loc[df['type'] == 'beslissing']
+    ECLIs = None
 
     # Retrieve these previous validation cases
-    old_val_cases = beslissingen.loc[old_val_ECLIds]['data']
+    if old_val_ECLIs:
+        # NOTE that len(ECLIs) is not always equal to len(cases), because a case may have multiple 'beslissing' sections
+        # old_val_cases = beslissingen.loc[old_val_ECLIs]['data']
+        old_val_cases = beslissingen.loc[old_val_ECLIs, 'data']
+        old_val_ECLIs = list(old_val_cases.index)
 
-    # seed = 2020  # used previously
-    random.seed(seed)
-    idx = random.sample(range(len(beslissingen)), k=25)
-    cases = beslissingen.iloc[idx]['data']
-    # vectors = beslissingen.iloc[idx]['straffen']
-    ECLIds = list(beslissingen.index[idx])
+    if n_samples > 0:
+        print(f"Randomly sampling {n_samples} cases.")
+        random.seed(seed)
+        idx = random.sample(range(len(beslissingen)), k=n_samples)
+        cases = beslissingen.iloc[idx]['data']
+        # vectors = beslissingen.iloc[idx]['straffen']
+        ECLIs = list(beslissingen.index[idx])
 
-    # Assert there's no overlap before merging
-    intersection = set(old_val_ECLIds) & set(ECLIds)
-    print(len(intersection), intersection)
-    assert len(intersection) == 0
+        if old_val_ECLIs:
+            # Assert there's no overlap before merging
+            intersection = set(old_val_ECLIs) & set(ECLIs)
+            print(len(intersection), intersection)
+            assert len(intersection) == 0
 
-    print("Randomly selected cases for validation:", ECLIds, len(ECLIds))
+        print("Randomly selected cases for validation:", ECLIs, len(ECLIs))
 
-    # Merge with old validation cases
-    cases = pd.concat([old_val_cases, cases], axis=0)
-    ECLIds = old_val_ECLIds + ECLIds
-    print("All selected cases for validation:", ECLIds, len(ECLIds))
+    # Merge if applicable
+    if old_val_ECLIs and ECLIs:
+        print("Merging randomly selected cases with manually provided cases.")
+        # TODO does this destroy the index?
+        cases = pd.concat([old_val_cases, cases], axis=0)
+        ECLIs = old_val_ECLIs + ECLIs
+    elif old_val_ECLIs:
+        print("Using manually provided cases only.")
+        ECLIs = old_val_ECLIs
+        cases = old_val_cases
+
+    if not ECLIs:
+        print("ERROR: you have not selected any cases for manual evaluation.")
+        print("Terminating.")
+        return
+
+    print("All selected cases for validation:", set(ECLIs), len(set(ECLIs)))
+    assert len(ECLIs) == len(cases)  # N.B. may contain multiple sections from the same case!
 
     sys.stdout = open(fn_out, 'w', encoding='utf-8')
     for i, case in enumerate(cases):
-        print("CASE:", ECLIds[i])
+        print("CASE:", ECLIs[i])
         print("=============================")
         print("TEXT:")
         print(case)
@@ -249,7 +272,3 @@ def manual_eval_random_cases(df: pd.DataFrame, pp: PunishmentPattern,
         print("TP:\nFP:\nTN:\nFN:\n\n")
 
     sys.stdout.close()
-
-    # If I want to add more cases to evaluate later, just repeat sampling (but check for duplicates)
-    # idx = random.sample(range(len(beslissingen)), k=25)
-    # print(idx)
