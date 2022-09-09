@@ -10,7 +10,7 @@ This file is produced by running `src/eval_punishment_extration.py`.
 - TN: 52
 - FN: 5
 
-$$F1 = \frac{2 TP}{2TP + FP + FN} = \fraC{90}{90 + 5 +5} = 0.90$$
+$$F1 = \frac{2 TP}{2TP + FP + FN} = \frac{90}{90 + 5 +5} = 0.90$$
 
 CASE: ECLI:NL:RBAMS:2021:2514
 =============================
