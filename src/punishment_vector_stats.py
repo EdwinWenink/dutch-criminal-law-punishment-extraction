@@ -149,6 +149,7 @@ cmap = sns.diverging_palette(20, 230, as_cmap=True)
 ax = sns.heatmap(co_occurrence,
                  cmap=cmap,
                  annot=True, xticklabels=label_names,
+                 fmt='g',  # do not use scientific notation
                  yticklabels=label_names, center=0, square=True, linewidth=.5)
 plt.title("Co-occurrence matrix of punishments.")
 plt.tight_layout()
@@ -173,6 +174,7 @@ cmap = sns.diverging_palette(20, 230, as_cmap=True)
 ax = sns.heatmap(co_occurrence_norm,
                  cmap=cmap,
                  annot=True, xticklabels=label_names,
+                 fmt='.2f',  # do not use scientific notation
                  yticklabels=label_names, center=0, square=True, linewidth=.5)
 plt.title("Co-occurrence matrix of punishments normalized by popularity (Jaccard index).")
 plt.tight_layout()
