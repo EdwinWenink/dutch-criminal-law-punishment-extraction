@@ -73,8 +73,6 @@ def run_pipeline(config: DictConfig, **kwargs) -> None:
     # For each case decision extract all punishment and their heights as a vector
     # and write them to the csv
 
-    # TODO make strafmaat_label part of the PARSING pipeline
-
     # Read data loader parameters from config
     # cased_data = config.dataloader.cased_data  # whether to read in cased input file
     reduce_to_sentences = config.dataloader.reduce_to_sentences  # Do we explode paragraph data to sentence level?
@@ -103,7 +101,6 @@ def run_pipeline(config: DictConfig, **kwargs) -> None:
     log.info(df.columns)
 
     # Extract punishment vectors
-    # TODO maybe option to skip?
     pp = PunishmentPattern()
     df = extract_all_punishment_vectors(pp, df, 'data')
     df.to_csv(dataloader.data_path)
