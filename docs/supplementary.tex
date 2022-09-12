@@ -279,7 +279,10 @@ The following examples are all detected:
 
 \subsection{Acquittal}
 
-\literalset\vrijspraak (?i)(?P<vrijspraak>vrijgesproken|vrijspraak|spreekt[^.\r\n;]*\svrij|wijst[^\r\n;]{0,100}\saf)(?:(?!meer of anders).){0,50}(?P<nebisinidem>meer of anders (?:ten laste is|is ten laste) gelegd)?
+% Old version
+%\literalset\vrijspraak (?i)(?P<vrijspraak>vrijgesproken|vrijspraak|spreekt[^.\r\n;]*\svrij|wijst[^\r\n;]{0,100}\saf)(?:(?!meer of anders).){0,50}(?P<nebisinidem>meer of anders (?:ten laste is|is ten laste) gelegd)?
+
+\literalset\vrijspraak (?i)((?P<nebisinidem1>meer of anders (?:ten laste is gelegd|is ten laste gelegd|is tenlastegelegd|tenlastegelegd is)).{0,50})?(?P<vrijspraak>vrijgesproken|vrijspraak|spreekt[^.\r\n;]*\svrij|wijst[^\r\n;]{0,100}\saf)(?:(?!meer of anders).){0,50}(?P<nebisinidem2>meer of anders (?:ten laste is gelegd|is ten laste gelegd|is tenlastegelegd|tenlastegelegd is))?
 
 \texttt{\printliteral\vrijspraak}
 
@@ -293,8 +296,13 @@ The phrase ``wijst voor het overige af'' (rejection of remaining claims) is a co
 In many cases we find a similar phrase which, however, has a different special significance.
 For example, in case ECLI:NL:RBZWB:2020:6800 we find:
 
-``- verklaart het ten laste gelegde bewezen, zodanig als hierboven onder 4.4 is omschreven; - spreekt verdachte vrij van wat meer of anders is ten laste gelegd;'' (acquittal of all points except the proven facts mentioned in section 4.4).
+\begin{quote}
+- verklaart het ten laste gelegde bewezen, zodanig als hierboven onder 4.4 is omschreven;
 
+- spreekt verdachte vrij van wat meer of anders is ten laste gelegd; 
+\end{quote}
+
+This indicates acquittal of all points except the proven facts mentioned in section 4.4.
 The facts in section 4.4 are, however, the only facts mentioned in the case.
 This phrasing rather indicates that there will be no repeated prosecution on closely related facts.
 This is called the \emph{ne bis in idem} (``not twice in the same'') principle in civil law; its equivalent being the ``double jeopardy'' clause in common law. 
@@ -306,12 +314,18 @@ In any case, the relevance for the labelling of case outcomes is that even thoug
 This means that we should recognize this situation and not label it as ``acquittal''.
 This is done with the following expression:
 
-\literalset\nebisinidem (?:(?!meer of anders).){0,50}(?P<nebisinidem>meer of anders (?:ten laste is|is ten laste) gelegd)?
+% \literalset\nebisinidem (?:(?!meer of anders).){0,50}(?P<nebisinidem>meer of anders (?:ten laste is|is ten laste) gelegd)?
+\literalset\nebisinidem (?:(?!meer of anders).){0,50}(?P<nebisinidem2>meer of anders (?:ten laste is gelegd|is ten laste gelegd|is tenlastegelegd|tenlastegelegd is))?
 \texttt{\printliteral\nebisinidem}
 
 Because the ``ne bis in idem'' clause is optional, it is necessary to temper the scope of the \texttt{.} token with a negative lookahead.
 This avoid that the construct \texttt{.{0,50}} expands over the optional group and never matches it, even if it is present.
 This construct is also used in the regular expression for TBS.
+The phrase indicating ``ne bis in idem'' can also occur before the indication of acquittal, as in ``verklaart niet bewezen hetgeen aan de verdachte meer of anders ten laste is gelegd dan hiervoor bewezen is verklaard en spreekt de verdachte daarvan vrij'', which we match with an optional beginning group.
+This beginning group is a literal match that anchors the pattern, so we do not need extra tricks for tempering the scope of \texttt{.{0,50}} here.
+
+We find that if we do not exclude the formal ``ne bis in idem'', acquittal is detected in the vast majority of cases, which gives an incorrect picture.
+
  
 \subsection{Test cases}\label{sec:strafmaat_test_cases}
 
