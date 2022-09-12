@@ -144,7 +144,7 @@ plt.close()
 
 # How many cases are acquittal without other main punishments?
 print("Acquittal without other co-occuring punishments.")
-print(np.sum(np.sum(straf_labels[straf_labels[:, 5] == 1], axis=1) == 1))  # 483/2301 cases with vrijspraak=1
+print(np.sum(np.sum(straf_labels[straf_labels[:, 5] == 1], axis=1) == 1))  # 395/1313 cases with vrijspraak=1
 
 # CO-OCCURRENCE MATRIX
 
@@ -190,7 +190,7 @@ cmap = sns.diverging_palette(20, 230, as_cmap=True)
 ax = sns.heatmap(co_occurrence_norm,
                  cmap=cmap,
                  annot=True, xticklabels=label_names,
-                 fmt='.3f',  # do not use scientific notation
+                 # fmt='.3f',  # do not use scientific notation
                  yticklabels=label_names, center=0, square=True, linewidth=.5)
 plt.title("Co-occurrence matrix of punishments normalized by popularity (Jaccard index).")
 plt.tight_layout()
@@ -278,20 +278,20 @@ if show: plt.show()
 # PAIRWISE CORRELATIONS ON NON-ZERO PAIRS
 # ---------------------------------------
 
-# GEVANGENIS
+# NOTE this 'method' does not work for TBS and vrijspraak
+# the > 0 filter will give a constant array
+# i.e. a degenerate case with only tied ranks
 
-# Correlation gevangenis and boete
-spearman_corr, spearman_p = spearmanr(np.vstack((gevangenis, boete)), axis=1)
-print(spearman_corr)
-print(spearman_p)
+# GEVANGENIS
 
 # Correlation in situations where both gevangenisstraf and hechtenis are assigned
 mask = np.logical_and(gevangenis > 0, hechtenis > 0)
 print("gevangenis x hechtenis co-occurence")
 print("N =", len(gevangenis[mask]))
 spearman_corr, spearman_p = spearmanr(np.vstack((gevangenis[mask], hechtenis[mask])), axis=1)
-print(spearman_corr)  # 0.18  -> TODO in the full matrix this was -0.18! Did I mess something up?
-print(spearman_p)  # p=0.54
+print(spearman_corr)  # 0.18
+print(spearman_p)  # p=0.55
+print()
 
 # Correlation in situations where both gevangenisstraf and boete are assigned
 mask = np.logical_and(gevangenis > 0, boete > 0)
@@ -299,7 +299,8 @@ print("gevangenis x fine co-occurence")
 print("N =", len(gevangenis[mask]))
 spearman_corr, spearman_p = spearmanr(np.vstack((gevangenis[mask], boete[mask])), axis=1)
 print(spearman_corr)  # 0.32
-print(spearman_p)  # p=7.88 e-0.8
+print( spearman_p)  # p=6.62 e-0.8
+print()
 
 # Correlation in situations where both gevangenisstraf and taakstraf are assigned
 mask = np.logical_and(gevangenis > 0, taakstraf > 0)
@@ -308,10 +309,7 @@ print("N =", len(gevangenis[mask]))
 spearman_corr, spearman_p = spearmanr(np.vstack((gevangenis[mask], taakstraf[mask])), axis=1)
 print(spearman_corr)  # 0.34
 print(spearman_p)  # p=1.43 e-08
-
-# NOTE this 'method' does not work for TBS and vrijspraak
-# the > 0 filter will give a constant array
-# i.e. a degenerate case with only tied ranks
+print() 
 
 # HECHTENIS
 
@@ -322,6 +320,7 @@ print("N =", sum(mask))
 spearman_corr, spearman_p = spearmanr(np.vstack((hechtenis[mask], boete[mask])), axis=1)
 print(spearman_corr)  # .41
 print(spearman_p)  # 0.00263
+print() 
 
 # Correlation in situations where both hechtenis and taakstraf are assigned
 mask = np.logical_and(hechtenis > 0, taakstraf > 0)
@@ -330,6 +329,7 @@ print("N =", sum(mask))
 spearman_corr, spearman_p = spearmanr(np.vstack((hechtenis[mask], taakstraf[mask])), axis=1)
 print(spearman_corr)  # -0.0059
 print(spearman_p)  # .97
+print() 
 
 # TAAKSTRAF
 # Correlation in situations where both taakstraf and boete are assigned
@@ -338,4 +338,5 @@ print("taakstraf x boete co-occurence")
 print("N =", sum(mask))
 spearman_corr, spearman_p = spearmanr(np.vstack((taakstraf[mask], boete[mask])), axis=1)
 print(spearman_corr)  # .25
-print(spearman_p)  # p=0.00804
+print(spearman_p)  # p=0.00739
+print() 

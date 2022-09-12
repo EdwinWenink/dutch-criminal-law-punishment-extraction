@@ -3,7 +3,7 @@
 Punishments that should be matched are in **bold**.
 These are decisions sections from 35 randomly sampled real Dutch criminal law cases from 2021.
 Below each case is the output of the punishment extraction pipeline.
-This file is produced by running `src/eval_punishment_extration.py`.
+The template for this file is produced by running `python -m src.extract_punishments.py --debug=True`.
 
 - TP: 45
 - FP: 5
@@ -11,6 +11,10 @@ This file is produced by running `src/eval_punishment_extration.py`.
 - FN: 5
 
 $$F1 = \frac{2 TP}{2TP + FP + FN} = \frac{90}{90 + 5 +5} = 0.90$$
+
+Total punishments = TP + FN = 50.
+
+
 
 CASE: ECLI:NL:RBAMS:2021:2514
 =============================
