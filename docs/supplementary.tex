@@ -594,7 +594,7 @@ OUT: \{'TBS': 0, 'gevangenisstraf': 0, 'hechtenis': 0, 'taakstraf': 0, 'geldboet
 
 Regular expressions are surprisingly effective for extracting the sentences from case decisions because juridical language use is relatively structured.
 There are however some exceptions that the regular expressions do not capture.
-The good f1-score of 0.94 shows that the following situations are indeed exceptions.
+The good f1-score of 0.90 shows that the following situations are indeed exceptions.
 It is possible to extend the used regular expressions and the rule-based classifier, but within the scope of this project a labelling score of 0.94 is more than sufficient.
 
 The used regular expression assumes that the name of the type of punishment precedes the duration of the punishment.
@@ -964,5 +964,6 @@ The manual evaluation results presented in the accompanying paper relate to the 
 
 ECLI:NL:RBAMS:2021:2514, ECLI:NL:RBAMS:2021:7026, ECLI:NL:RBAMS:2021:765, ECLI:NL:RBGEL:2021:2304, ECLI:NL:RBGEL:2021:3033, ECLI:NL:RBGEL:2021:4518, ECLI:NL:RBGEL:2021:6569, ECLI:NL:RBGEL:2021:6833, ECLI:NL:RBLIM:2021:5488, ECLI:NL:RBLIM:2021:5570, ECLI:NL:RBMNE:2021:5182, ECLI:NL:RBNNE:2021:2888, ECLI:NL:RBOVE:2021:1717, ECLI:NL:RBOVE:2021:1784, ECLI:NL:RBOVE:2021:2379, ECLI:NL:RBOVE:2021:3523, ECLI:NL:RBOVE:2021:3609, ECLI:NL:RBOVE:2021:4172, ECLI:NL:RBOVE:2021:4354, ECLI:NL:RBOVE:2021:4510, ECLI:NL:RBOVE:2021:606, ECLI:NL:RBOVE:2021:643, ECLI:NL:RBOVE:2021:75, ECLI:NL:RBROT:2021:1932, ECLI:NL:RBROT:2021:2039, ECLI:NL:RBROT:2021:4354, ECLI:NL:RBROT:2021:7766, ECLI:NL:RBROT:2021:8751, ECLI:NL:RBROT:2021:8814, ECLI:NL:RBROT:2021:8835, ECLI:NL:RBROT:2021:9086, ECLI:NL:RBROT:2021:9706, ECLI:NL:RBZWB:2021:3656, ECLI:NL:RBZWB:2021:3658, ECLI:NL:RBZWB:2021:6216.
 
-\end{document}
+Further information on the manual evaluation is made available under \texttt{docs/} in the accompanying Github repository.
 
+\end{document}

@@ -138,3 +138,6 @@ dmypy.json
 *.out
 *.synctex.gz
 *.toc
+
+# Zips
+*.zip

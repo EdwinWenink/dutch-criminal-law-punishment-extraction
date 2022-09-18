@@ -95,4 +95,4 @@ To run the punishment extraction process against a set of test cases, as well as
 python -m src.extract_punishments.py --debug=True
 ```
 
-The manual evaluation results used in the paper can be found [here]( evaluate_strafmaat_paper.md ).
+The manual evaluation results used in the paper can be found [here](docs/evaluate_strafmaat_paper.md ).
