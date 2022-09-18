@@ -21,8 +21,6 @@ This CSV can be used for several downstream AI, data science, and machine learni
 By default, a data set is created on the section level, where each section is annotated with its role in the overall case transcription.
 For sections where the role is "beslissing" (i.e. the case decision) we additionally extract all punishments that are imposed in that decision section, *including their height*, as a multidimensional vector.
 
-TODO explain logging.
-
 ## Configuration
 
 The [config](./config) folder holds the relevant configuration parameters for the Hydra pipeline.
@@ -41,9 +39,6 @@ Parsing the xml of the downloaded cases also does not have be repeated unless ch
 These options can be freely combined:
 
 `python main.py skip_query=true caseparser.skip=true`.
-
-TODO explain debug mode.
-
 
 ## Used regular expressions
 
