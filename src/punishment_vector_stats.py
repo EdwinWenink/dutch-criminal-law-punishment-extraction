@@ -1,11 +1,12 @@
-import numpy as np
-import pandas as pd
-import seaborn as sns
+from pathlib import Path
+
 import matplotlib.pyplot as plt
-from scipy.stats import rankdata, spearmanr, kendalltau
+import numpy as np
+import seaborn as sns
+from scipy.stats import kendalltau, rankdata, spearmanr
+
 from src.dataloader import DataLoader
 from src.utils import convert_vectors_to_binary
-from pathlib import Path
 
 label_names_dutch = ['TBS', 'gevangenis', 'hechtenis', 'taakstraf', 'geldboete', 'vrijspraak']
 label_names = ['TBS', 'prison sentence', 'custody', 'community service', 'fine', 'acquittal']
@@ -88,8 +89,10 @@ ax.set_xlabel("No/Yes")
 ax.set_ylabel("Counts")
 plt.title("Counts for TBS")
 plt.tight_layout()
-if show: plt.show()
-if save: plt.savefig(plots_dir / 'hist_TBS.png', bbox_inches='tight')
+if show:
+    plt.show()
+if save:
+    plt.savefig(plots_dir / 'hist_TBS.png', bbox_inches='tight')
 plt.close()
 
 # Gevangenisstraf
@@ -98,18 +101,23 @@ ax.set_xlabel("Days")
 ax.set_ylabel("Counts")
 plt.title("Histogram for prison sentence (excl. zero)")
 plt.tight_layout()
-if show: plt.show()
-if save: plt.savefig(plots_dir / 'hist_prison.png', bbox_inches='tight')
+if show:
+    plt.show()
+if save:
+    plt.savefig(plots_dir / 'hist_prison.png', bbox_inches='tight')
 plt.close()
 
 # Hechtenis
-ax = sns.histplot(x=straf_labels[:, 2], binwidth=25, binrange=(1, max(straf_labels[:, 2])), kde=True)
+ax = sns.histplot(x=straf_labels[:, 2], binwidth=25,
+                  binrange=(1, max(straf_labels[:, 2])), kde=True)
 ax.set_xlabel("Days")
 ax.set_ylabel("Counts")
 plt.title("Histogram for custody (excl. zero)")
 plt.tight_layout()
-if show: plt.show()
-if save: plt.savefig(plots_dir / 'hist_custody.png', bbox_inches='tight')
+if show:
+    plt.show()
+if save:
+    plt.savefig(plots_dir / 'hist_custody.png', bbox_inches='tight')
 plt.close()
 
 # Taakstraf
@@ -118,8 +126,10 @@ ax.set_xlabel("Days")
 ax.set_ylabel("Counts")
 plt.title("Counts for community service (excl. zero)")
 plt.tight_layout()
-if show: plt.show()
-if save: plt.savefig(plots_dir / 'hist_community_service.png', bbox_inches='tight')
+if show:
+    plt.show()
+if save:
+    plt.savefig(plots_dir / 'hist_community_service.png', bbox_inches='tight')
 plt.close()
 
 # Geldboete
@@ -128,8 +138,10 @@ ax.set_xlabel("Euros")
 ax.set_ylabel("Counts")
 plt.title("Histogram for fine (excl. zero)")
 plt.tight_layout()
-if show: plt.show()
-if save: plt.savefig(plots_dir / 'hist_fine.png', bbox_inches='tight')
+if show:
+    plt.show()
+if save:
+    plt.savefig(plots_dir / 'hist_fine.png', bbox_inches='tight')
 plt.close()
 
 # Vrijspraak
@@ -138,13 +150,16 @@ ax.set_xlabel("No/Yes")
 ax.set_ylabel("Counts")
 plt.title("Counts for acquittal")
 plt.tight_layout()
-if show: plt.show()
-if save: plt.savefig(plots_dir / 'hist_acquittal.png', bbox_inches='tight')
+if show:
+    plt.show()
+if save:
+    plt.savefig(plots_dir / 'hist_acquittal.png', bbox_inches='tight')
 plt.close()
 
 # How many cases are acquittal without other main punishments?
 print("Acquittal without other co-occuring punishments.")
-print(np.sum(np.sum(straf_labels[straf_labels[:, 5] == 1], axis=1) == 1))  # 395/1313 cases with vrijspraak=1
+# 395/1313 cases with vrijspraak=1
+print(np.sum(np.sum(straf_labels[straf_labels[:, 5] == 1], axis=1) == 1))
 
 # CO-OCCURRENCE MATRIX
 
@@ -157,7 +172,8 @@ diagonal = np.diagonal(co_occurrence)
 assert np.sum(diagonal) == np.sum(straf_labels_bin)
 print("Total punishments assigned in all cases:", np.sum(diagonal))
 
-label_names = ['TBS', 'prison sentence', 'custody', 'community service', 'fine', 'acquittal']
+label_names = ['TBS', 'prison sentence', 'custody',
+               'community service', 'fine', 'acquittal']
 
 cmap = sns.diverging_palette(20, 230, as_cmap=True)
 ax = sns.heatmap(co_occurrence,
@@ -167,8 +183,10 @@ ax = sns.heatmap(co_occurrence,
                  yticklabels=label_names, center=0, square=True, linewidth=.5)
 plt.title("Co-occurrence matrix of punishments.")
 plt.tight_layout()
-if show: plt.show()
-if save: plt.savefig(plots_dir / 'co_occurrence.png', bbox_inches='tight')
+if show:
+    plt.show()
+if save:
+    plt.savefig(plots_dir / 'co_occurrence.png', bbox_inches='tight')
 plt.close()
 
 # Normalize co-occurrence matrix entries i,j by popularity of i and j
@@ -194,8 +212,10 @@ ax = sns.heatmap(co_occurrence_norm,
                  yticklabels=label_names, center=0, square=True, linewidth=.5)
 plt.title("Co-occurrence matrix of punishments normalized by popularity (Jaccard index).")
 plt.tight_layout()
-if show: plt.show()
-if save: plt.savefig(plots_dir / 'co_occurrence_norm.png', bbox_inches='tight')
+if show:
+    plt.show()
+if save:
+    plt.savefig(plots_dir / 'co_occurrence_norm.png', bbox_inches='tight')
 plt.close()
 
 tbs = straf_labels[:, 0]
@@ -253,7 +273,9 @@ ax = sns.heatmap(spearman_corr, mask=mask, cmap=cmap, annot=True, xticklabels=la
                  yticklabels=label_names, center=0, square=True, linewidth=.5)
 plt.title("Spearman's Rho on continuous punishment labels")
 plt.tight_layout()
-if show: plt.show()
+if show:
+    plt.show()
+plt.close()
 
 # Repeat analysis on binary version of the labels
 spearman_corr_bin, spearman_p_bin = spearmanr(straf_labels_bin)
@@ -273,7 +295,9 @@ ax = sns.heatmap(spearman_corr_bin, mask=mask, cmap=cmap, annot=True, xticklabel
 
 plt.title("Spearman's Rho on binary punishment labels")
 ax.figure.tight_layout()
-if show: plt.show()
+if show:
+    plt.show()
+plt.close()
 
 # PAIRWISE CORRELATIONS ON NON-ZERO PAIRS
 # ---------------------------------------
@@ -309,7 +333,7 @@ print("N =", len(gevangenis[mask]))
 spearman_corr, spearman_p = spearmanr(np.vstack((gevangenis[mask], taakstraf[mask])), axis=1)
 print(spearman_corr)  # 0.34
 print(spearman_p)  # p=1.43 e-08
-print() 
+print()
 
 # HECHTENIS
 
@@ -320,7 +344,7 @@ print("N =", sum(mask))
 spearman_corr, spearman_p = spearmanr(np.vstack((hechtenis[mask], boete[mask])), axis=1)
 print(spearman_corr)  # .41
 print(spearman_p)  # 0.00263
-print() 
+print()
 
 # Correlation in situations where both hechtenis and taakstraf are assigned
 mask = np.logical_and(hechtenis > 0, taakstraf > 0)
@@ -329,7 +353,7 @@ print("N =", sum(mask))
 spearman_corr, spearman_p = spearmanr(np.vstack((hechtenis[mask], taakstraf[mask])), axis=1)
 print(spearman_corr)  # -0.0059
 print(spearman_p)  # .97
-print() 
+print()
 
 # TAAKSTRAF
 # Correlation in situations where both taakstraf and boete are assigned
@@ -339,4 +363,34 @@ print("N =", sum(mask))
 spearman_corr, spearman_p = spearmanr(np.vstack((taakstraf[mask], boete[mask])), axis=1)
 print(spearman_corr)  # .25
 print(spearman_p)  # p=0.00739
-print() 
+print()
+
+# Plot results of manual evaluation (hard coded)
+
+# Results from manual evaluation in paper
+TP, FN, TN, FP = 45, 5, 52, 5
+data = [[TP, FN],
+        [FP, TN]]
+
+# Define labels
+labels = ['Sentence', 'No sentence']
+
+# Create confusion matrix with Seaborn heatmap
+cmap = sns.diverging_palette(20, 230, as_cmap=True)
+sns.set(color_codes=True)
+sns.set(font_scale=1.2)
+plt.figure(1, figsize=(9, 6))
+plt.title("Confusion matrix (35 cases)")
+
+ax = sns.heatmap(data, annot=True, cmap=cmap,
+                 center=0, square=True, linewidth=.5)
+ax.set_xticklabels(labels)
+ax.set_yticklabels(labels)
+ax.set(ylabel="True Label", xlabel="Predicted Label")
+
+plt.tight_layout()
+if save:
+    plt.savefig(plots_dir / 'confusion_matrix.png', bbox_inches='tight', dpi=300)
+if show:
+    plt.show()
+plt.close()
