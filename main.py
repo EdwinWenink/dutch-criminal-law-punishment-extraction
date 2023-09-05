@@ -1,6 +1,8 @@
 import os
+
 import hydra
 from omegaconf import DictConfig, OmegaConf
+
 from src.pipeline import run_pipeline
 
 
