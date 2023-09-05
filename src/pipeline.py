@@ -1,11 +1,13 @@
+from pathlib import Path
+import os
+
+from omegaconf import DictConfig
+
 from src.caseloader import CaseLoader
 from src.dataloader import DataLoader
 from src.caseparser import CaseParser
 from src.utils import get_logger, construct_ECLI_query
-from src.extract_punishments import extract_all_punishment_vectors, PunishmentPattern, label_hoofdstraf
-from omegaconf import DictConfig
-from pathlib import Path
-import os
+from src.extract_punishments import extract_all_punishment_vectors, PunishmentPattern
 
 
 def run_pipeline(config: DictConfig, **kwargs) -> None:
@@ -25,7 +27,7 @@ def run_pipeline(config: DictConfig, **kwargs) -> None:
 
     # Construct ECLI-index query from parameters
     query = construct_ECLI_query(config.query)
-    log.info(f"Query: {query}")
+    log.info("Query: %s", query)
 
     # Where to store the cases
     query_dir = Path(data_dir) / 'query'
@@ -50,14 +52,14 @@ def run_pipeline(config: DictConfig, **kwargs) -> None:
         include_section_titles = config.caseparser.include_section_titles
         # ['Hoger beroep', 'Cassatie', 'Cassatie in het belang der wet', 'Raadkamer',
         # 'Artikel 81 RO-zaken', 'Wraking', 'Beschikking']
-        exclude_procedures = config.caseparser.exclude_procedures
+        include_procedures = config.caseparser.include_procedures
         data_to_key = config.caseparser.data_key
 
         # Initialize the xml parser
         parser = CaseParser(data_key=data_to_key,
                             level=level,
                             include_section_titles=include_section_titles,
-                            exclude_procedures=exclude_procedures)
+                            include_procedures=include_procedures)
 
         # Parse all the returned cases
         df = parser.parse_all_cases(case_dir, write_case_text=False)

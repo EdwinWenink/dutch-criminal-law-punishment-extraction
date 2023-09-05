@@ -60,20 +60,20 @@ Included:
 
 Excluded:
 
-- Artikel 80a RO-zaken          
+- Artikel 80a RO-zaken
 - Artikel 81 RO-zaken
 - Beschikking
-- Beslissing RC                 
+- Beslissing RC
 - Cassatie
 - Cassatie in het belang der wet
-- Herroeping                    
-- Herziening                    
+- Herroeping
+- Herziening
 - Hoger beroep
-- Hoger beroep kort geding      
-- Rekestprocedure               
-- Tussenbeschikking             
-- Verschoning                   
-- Verzet                        
+- Hoger beroep kort geding
+- Rekestprocedure
+- Tussenbeschikking
+- Verschoning
+- Verzet
 - Wraking
 
 ## Evaluation
@@ -87,7 +87,9 @@ The performance of the punishment extraction is manually evaluated on the follow
 To run the punishment extraction process against a set of test cases, as well as creating a file with real case decisions for manual evaluation, run:
 
 ```bash
-python -m src.extract_punishments.py --debug=True
+python -m src.extract_punishments --debug=True
 ```
 
 The manual evaluation results used in the paper can be found [here](docs/evaluate_strafmaat_paper.md ).
+
+You can manually run the test suite with `python -m pytest tests` too.

@@ -1,10 +1,12 @@
-from src.utils import get_logger, construct_mask
 from pathlib import Path
+import random
+
 import pandas as pd
 import numpy as np
-import random
 from sklearn.preprocessing import LabelEncoder
 from nltk.tokenize import sent_tokenize
+
+from src.utils import get_logger, construct_mask
 
 log = get_logger(__name__)
 
@@ -99,9 +101,9 @@ class DataLoader:
         else:
             filepath = self.data_path
 
-        log.info(f"Loading data from: {filepath}")
+        log.info("Loading data from %s:", filepath)
         if not filepath.is_file():
-            log.error(f"Data not found at {filepath}. Provide a valid filepath.")
+            log.error("Data not found at %s. Provide a valid filepath.", filepath)
             raise FileNotFoundError
 
         if filepath.suffix == '.csv':
@@ -116,14 +118,14 @@ class DataLoader:
             for col in drop_columns:
                 try:
                     df = df.drop(columns=col)
-                    log.info(f"Column {col} dropped.")
+                    log.info("Column %s dropped.", col)
                 except Exception:
-                    log.warning(f"Tried to drop column {col}, but it was not in the dataframe")
+                    log.warning("Tried to drop column %s, but it was not in the dataframe.", col)
 
         if drop_types:
             for type in drop_types:
                 df = df[df['type'] != type]
-                log.info(f"Dropping type '{type}'")
+                log.info("Dropping type '%s'", type)
 
         # Convert to a binary problem by taking a single value of the target variable
         # and then defining all other values as "other"
@@ -144,8 +146,8 @@ class DataLoader:
         # Set the document identifier as the dataframe key
         df.set_index(self.document_key, inplace=True)
 
-        log.info(f"Selected columns: {list(df.columns)}")
-        log.info(f"Selected section types: {np.unique(df['type'].values)}")
+        log.info("Selected columns: %s", list(df.columns))
+        log.info("Selected section types: %s", np.unique(df['type'].values))
         return df
 
     def create_typed_paragraph_dataset(self, df, fn='paragraph_data_types.csv'):
@@ -194,7 +196,7 @@ class DataLoader:
             log.info("Creating typed data set")
             df = self.create_typed_paragraph_dataset(self.load(fn), fn)
         else:
-            log.info(f"Loading typed data set from disk {filepath}. Binary labels {binary_label}.")
+            log.info("Loading typed data set from disk %s. Binary labels %s.", filepath, binary_label)
             df = pd.read_csv(filepath, sep=",", header="infer")
 
         if binary_label:
@@ -239,7 +241,7 @@ class DataLoader:
                 df = df[targets != label]
         return df
 
-    def get_Xy(self, df, target=None, data_key=None) -> np.ndarray:
+    def get_Xy(self, df, target=None, data_key=None) -> tuple:
         '''
         Get raw text data X and define a column as the
         classification target y; encode the target labels
@@ -247,7 +249,7 @@ class DataLoader:
 
         if data_key is None:
             data_key = self.data_key  # default is 'data'
-            log.info(f"Using default data key: {data_key}")
+            log.info("Using default data key %s:", data_key)
 
         if df is None:
             # Fallback option
@@ -257,7 +259,7 @@ class DataLoader:
         if target is None:
             target = self.target
 
-        log.info(f"Creating X and y with target: {target}")
+        log.info("Creating X and y with target %s:", target)
 
         X = df[data_key].values  # called 'paragraph' in original json, 'data' in processed version
         le = LabelEncoder()
@@ -277,7 +279,7 @@ class DataLoader:
         # Also return the fitted labelencoder so you can use inverse transform
         return X, y, le
 
-    def get_X(self, df, concat_sections=False, **kwargs):
+    def get_X(self, df, concat_sections=False, **kwargs) -> list:
         '''
         This function only loads raw text data without labels.
         Optionally concatenates sections belonging to the same document into a single document text.
@@ -296,7 +298,8 @@ class DataLoader:
                 X.extend(text)
         return X
 
-    def get_text(self, df, document_id: str, concat_sections: bool = True, concat_term="\n\n", **kwargs) -> list:
+    def get_text(self, df, document_id: str, concat_sections: bool = True,
+                 concat_term="\n\n", **kwargs) -> list:
         """ Returns the text belonging to a single reference document.
 
         A reference document with `document_id` contains multiple sections. This function
@@ -337,8 +340,8 @@ class DataLoader:
 
         # Test for presence of section_key
         if (self.section_key is None) or (self.section_key not in df.keys()):
-            print("Section id is either None or not present in the input data source")
-            print("ERROR: This function currently requires a section_key")
+            log.info("Section id is either None or not present in the input data source")
+            log.error("This function currently requires a section_key")
             return None
 
         # We explicitly include the section id to allow sorting of sections
@@ -350,7 +353,7 @@ class DataLoader:
         if 'filter' in kwargs.keys():
             filter = kwargs['filter']
             if len(filter.keys()) > 1:
-                print("WARNING: only filtering on a single column is supported")
+                log.warning("Only filtering on a single column is supported")
             filter_on_column = list(filter.keys())[0]
             input = np.array(df_doc[filter_on_column])
             values_to_keep = filter[filter_on_column]
@@ -372,26 +375,6 @@ class DataLoader:
         i = random.randint(0, rows-1)
         sample = df_type.iloc[i]
         if verbose:
-            log.info(f"\n{sample}")
-            log.info(f"\nTEXT:\n{sample[self.data_key]}")
+            log.info("\n%s", sample)
+            log.info("\nTEXT:\n%s", sample[self.data_key])
         return sample
-
-
-if __name__ == '__main__':
-
-    # Whether to use the data converted to lowercase or not
-    cased = True  # False -> lowercase data
-    reduce_to_sentences = True
-
-    paragraph_data = f'paragraph_data{"_cased" if cased else ""}.csv'
-    paragraph_data_typed = f'paragraph_data_types{"_cased" if cased else ""}.csv'
-
-    loader = DataLoader(paragraph_data=paragraph_data, reduce_to_sentences=reduce_to_sentences)
-
-    df = loader.load_typed_paragraph_dataset(fn=paragraph_data_typed, binary_labels=False)
-    print("Dataframe entries:", len(df))
-
-    # 2 class version of the same dataframe
-    df_2cl = loader.load_typed_paragraph_dataset(fn=paragraph_data_typed, binary_labels=True)
-
-    df_json = loader.load(fn='original_data.json')

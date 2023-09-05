@@ -16,7 +16,8 @@ class CaseParser:
     as requested through RESTful API from rechtspraak.nl
     '''
 
-    def __init__(self, data_key='data', level='section', include_section_titles=True, include_procedures=[]):
+    def __init__(self, data_key='data', level='section',
+                 include_section_titles=True, include_procedures=[]):
         '''
         params:
 
@@ -50,18 +51,9 @@ class CaseParser:
         In principle each case only has one section with the beslissing identified
         But for robustness I assume there can be multiple, just in case
         '''
-
-        # TODO does this work? No it does NOT.
-        # assert isinstance(results, bs4.element.ResultSet)
-
-        # TODO make this also handle e.g. a list of text and other scenarios?
-        # If TAG just directly use get_text()
-
         raw_text = []
         for result in results:
             raw_text += [text for text in result.stripped_strings]
-        # The following nested list comprehension actually interweaves the word order and has a different length
-        # [ text for text in beslissing.stripped_strings for beslissing in beslissingen]
         return ' '.join(raw_text)
 
     def parse_case(self, case):
@@ -90,7 +82,7 @@ class CaseParser:
 
         # Do not parse case if it's of a procedure in the exclude list
         if procedure not in self.include_procedures:
-            log.info(f"Skipping {ECLI} ({procedure})")
+            log.info("Skipping %s ECLI (%s)", ECLI, procedure)
             return None, None, None, None
 
         # Date of case
@@ -117,7 +109,7 @@ class CaseParser:
             log.error(e)
             inhoudsindicatie = ''
 
-        log.info(f"Parsing case {ECLI}")
+        log.info("Parsing case %s", ECLI)
 
         try:
             # This fails e.g. for ECLIs of type PHR -> ECLI:NL:PHR:YYYY:XXXX
@@ -165,7 +157,7 @@ class CaseParser:
 
         # uitspraak.info
         info = soup.find_all('uitspraak.info')
-        info_raw = self.get_raw_text(info)
+        _ = self.get_raw_text(info)
 
         section_data = []
         # In the CaseLoader class, there is an additional check to not retrieve xmls
@@ -180,19 +172,11 @@ class CaseParser:
             else:
                 label = self.label_based_on_title(title)
 
-            '''
-            #section_text = self.get_raw_text(section)  # my own function only works on ResultSet
-            if self.include_section_titles:
-                # The following line retrieves all text of the whole section, INCLUDING title
-                section_text = section.get_text().strip()
-            # Alternatively, we may want to exclude the title, since we used it for labeling
-                else:
-            '''
-
             if self.include_section_titles:
                 section_text = f"{title}\n"
                 par_texts = [title]
             else:
+                # Alternatively, we may want to exclude the title, since we used it for labeling
                 section_text = ''
                 par_texts = []
 

@@ -2,11 +2,16 @@ import logging
 import warnings
 import functools
 import difflib
-from typing import Sequence
+from typing import Sequence, Callable, Tuple
+from ast import literal_eval
+
+import numpy as np
+import pandas as pd
 from omegaconf import DictConfig, OmegaConf
 import rich
 from rich.syntax import Syntax
 from rich.tree import Tree
+from sklearn.preprocessing import Normalizer
 from sklearn.decomposition import TruncatedSVD, PCA
 from sklearn.metrics import calinski_harabasz_score, silhouette_score, silhouette_samples
 from sklearn.manifold import TSNE
@@ -16,15 +21,10 @@ import matplotlib.pyplot as plt
 import matplotlib as mpl
 import matplotlib.cm as cm
 from matplotlib.colors import rgb2hex
-import numpy as np
-import pandas as pd
-from ast import literal_eval
 from scipy import sparse
 import seaborn as sns
-# import plotly.graph_objs as go
 import plotly.express as px
 from yellowbrick.cluster import KElbowVisualizer
-from sklearn.preprocessing import Normalizer
 
 
 def get_logger(name=__name__, level=logging.INFO):
@@ -64,8 +64,7 @@ def construct_ECLI_query(params: dict):
 
     # Components are joined by '&' sign
     query = '&'.join(components)
-
-    log.info(f"Query: {query}")
+    log.info("Query: %s", query)
 
     return query
 
@@ -80,20 +79,19 @@ def extras(config: DictConfig) -> None:
     Args:
         config (DictConfig): [description]
     """
-    # enable adding new keys to config
+    # Enable adding new keys to config
     OmegaConf.set_struct(config, False)
 
-    # disable python warnings if <config.ignore_warnings=True>
+    # Disable python warnings if <config.ignore_warnings=True>
     if config.get("ignore_warnings"):
         log.info(f"Disabling python warnings! <config.ignore_warnings=True>")
         warnings.filterwarnings("ignore")
 
-    # set <config.trainer.fast_dev_run=True> if <config.debug=True>
+    # Set <config.trainer.fast_dev_run=True> if <config.debug=True>
     if config.get("debug"):
         log.info("Running in debug mode! <config.debug=True>")
-        #config.trainer.fast_dev_run = True
 
-    # disable adding new keys to config
+    # Disable adding new keys to config
     OmegaConf.set_struct(config, True)
 
 
@@ -103,7 +101,9 @@ def print_config(
                 "features"
         ),
         resolve: bool = True) -> None:
-    """Prints content of DictConfig using Rich library and its tree structure.
+    """
+    Prints content of DictConfig using Rich library and its tree structure.
+
     Args:
         config (DictConfig): Config.
         fields (Sequence[str], optional): Determines which main fields from config will be printed
@@ -127,7 +127,7 @@ def print_config(
     rich.print(tree)
 
 
-def compose(*functions):
+def compose(*functions) -> Callable:
     '''
     Compose an arbitary amount of functions into a single function
     Source: https://mathieularose.com/function-composition-in-python
@@ -137,7 +137,8 @@ def compose(*functions):
     return functools.reduce(comp, functions, lambda x: x)
 
 
-def principal_components(X, n_components, plot_dir='plots', run_name='default', seed=None):
+def principal_components(X, n_components, plot_dir='plots',
+                         run_name='default', seed=None) -> Tuple[np.ndarray, PCA] :
     '''
     Apply PCA on feature matrix X. If input data is sparse, it will be converted
     to dense representation because PCA requires this (unlike SVD).
@@ -160,15 +161,17 @@ def principal_components(X, n_components, plot_dir='plots', run_name='default', 
 
     # Report total explained variance
     var_coverage = pca.explained_variance_ratio_.sum()
-    log.info(f"PCA Total explained variance: {int(var_coverage*100)}%")
+    log.info("PCA Total explained variance: %s", f"{int(var_coverage*100)}%")
 
     return X, pca
 
 
-def SVD(X, n_components, plot_dir='plots', run_name='default', seed=None):
+def SVD(X, n_components, plot_dir='plots',
+        run_name='default', seed=None) -> Tuple[np.ndarray, TruncatedSVD]:
     '''
     Apply SVD on feature matrix X.
-    It is *assumed* that feature scaling is already performed prior to calling this function!
+
+    NOTE It is *assumed* that feature scaling is already performed prior to calling this function!
     '''
 
     svd = TruncatedSVD(n_components, random_state=seed)
@@ -184,17 +187,19 @@ def SVD(X, n_components, plot_dir='plots', run_name='default', seed=None):
 
     # Report total explained variance
     var_coverage = svd.explained_variance_ratio_.sum()
-    print(f"SVD Total explained variance: {int(var_coverage*100)}%")
+    log.info("SVD Total explained variance: %s", f"{int(var_coverage*100)}%")
     return X, svd
 
 
-def T_SNE(X, n_components, plot_dir='plots', run_name='default', seed=None):
+def T_SNE(X, n_components, plot_dir='plots', run_name='default', seed=None) -> np.ndarray:
     # n components must be <4?
-    X = TSNE(n_components, init='pca', verbose=1, perplexity=20, n_iter=1000, learning_rate=200.0, random_state=seed).fit_transform(X)
+    X = TSNE(n_components, init='pca', verbose=1, perplexity=20,
+             n_iter=1000, learning_rate=200.0, random_state=seed).fit_transform(X)
     return X
 
 
-def LSA(X, n_components, plot_dir='plots', run_name='default', seed=None):
+def LSA(X, n_components, plot_dir='plots',
+        run_name='default', seed=None) -> Tuple[np.ndarray, TruncatedSVD]:
     svd = TruncatedSVD(n_components, random_state=seed)
     normalizer = Normalizer(copy=False)
     lsa = make_pipeline(svd, normalizer)
@@ -210,8 +215,8 @@ def LSA(X, n_components, plot_dir='plots', run_name='default', seed=None):
 
     # Report total explained variance
     var_coverage = svd.explained_variance_ratio_.sum()
-    log.info(f"LSA Total explained variance: {int(var_coverage*100)}%")
-    print(f"LSA Total explained variance: {int(var_coverage*100)}%")
+    log.info("LSA Total explained variance: %s", f"{int(var_coverage*100)}%")
+    log.info("LSA Total explained variance: %s", f"{int(var_coverage*100)}%")
     return X, svd
 
 
@@ -233,7 +238,7 @@ def compute_loadings(pca, feature_names) -> pd.DataFrame:
     return loadings
 
 
-def vis_load_for_PC(pc_number, loadings, k=20, plot_dir='plots', run_name='default'):
+def vis_load_for_PC(pc_number, loadings, k=20, plot_dir='plots', run_name='default') -> None:
     '''
     Show top-k features most correlated with principle component of pc_number
     Show both top k most positive and negative  correlations
@@ -264,7 +269,8 @@ def vis_load_for_PC(pc_number, loadings, k=20, plot_dir='plots', run_name='defau
     plt.clf()
 
 
-def visualize_clusters(X, labels, n_clusters, method='svd', dim=3, symbol=None, hover=None, title=None, seed=42):
+def visualize_clusters(X, labels, method='svd', dim=3, symbol=None,
+                       hover=None, title=None, seed=42) -> None:
     '''
     dim:                whether to visualize in 2D or 3D
     symbol (Optional):  column name in df (str, int) or sequence of labels (Series, array-like) to assign mark symbols
@@ -292,7 +298,8 @@ def visualize_clusters(X, labels, n_clusters, method='svd', dim=3, symbol=None, 
 
     reduction = dimred.fit_transform(X)
 
-    print(f"Dimensionality reduction for visualization captured {int(dimred.explained_variance_ratio_.sum()*100)} variance")
+    log.info("Dimensionality reduction for visualization captured %s",
+             f"{int(dimred.explained_variance_ratio_.sum()*100)} variance")
 
     if title is None:
         title = f"{method}-reduced data"
@@ -375,7 +382,7 @@ def visualize_clusters(X, labels, n_clusters, method='svd', dim=3, symbol=None, 
                             line=dict(color='gray', width=1)))
         fig.show()
     else:
-        print("Warning: either select 2D or 3D (dim=2 or dim=3)")
+        log.warning("Either select 2D or 3D (dim=2 or dim=3)")
 
 
 def select_dimensionality_reduction(X, reduction_method=None, n_components=3, run_name='default', seed=42):
@@ -383,30 +390,30 @@ def select_dimensionality_reduction(X, reduction_method=None, n_components=3, ru
     Helper function that applies either 'pca', 'svd' or 't-sne'
     '''
     if reduction_method is None:
-        print("No dimensionality reduction selected")
+        log.warning("No dimensionality reduction selected")
         return X
     elif reduction_method.lower() == 'pca':
         X, pca = principal_components(X, n_components, plot_dir='plots', run_name=run_name, seed=seed)
-        print("Reduction: Principal Component Analysis (PCA)")
-        print(f"PCA total explained variance: {int(pca.explained_variance_ratio_.sum()*100)}%")
+        log.info("Reduction: Principal Component Analysis (PCA)")
+        log.info("PCA total explained variance: %s", f"{int(pca.explained_variance_ratio_.sum()*100)}%")
     elif reduction_method.lower() == 'svd':
         X, svd = SVD(X, n_components, plot_dir='plots', run_name=run_name, seed=seed)
-        print("Reduction: Singular Value Decomposition (SVD)")
-        print(f"SVD total explained variance: {int(svd.explained_variance_ratio_.sum()*100)}%")
+        log.info("Reduction: Singular Value Decomposition (SVD)")
+        log.info("SVD total explained variance: %s", f"{int(svd.explained_variance_ratio_.sum()*100)}%")
     elif reduction_method.lower() == 't-sne':
         # note n_components should be <4 so n_components parameter is not used
-        print("Reduction: t-SNE")
-        print("Warning: t-sne does not use the provided n_components parameter")
+        log.info("Reduction: t-SNE")
+        log.warning("T-sne does not use the provided n_components parameter")
         X = T_SNE(X, n_components=3, plot_dir='plots', run_name=run_name, seed=seed)
     elif reduction_method.lower() == 'lsa':
-        print("Reduction: performing Latent Semantic Analysis (LSA) ")
+        log.info("Reduction: performing Latent Semantic Analysis (LSA) ")
         X = LSA(X, n_components, plot_dir='plots', run_name=run_name, seed=seed)
     else:
-        print("No dimensionality reduction selected")
+        log.warning("No dimensionality reduction selected")
     return X
 
 
-def visualize_decision_boundary_clusters_2D(X, n_clusters, plot_dir='plots', method='svd'):
+def visualize_decision_boundary_clusters_2D(X, n_clusters, plot_dir='plots', method='svd') -> None:
     '''
     Visualizes clusters with decision boundaries
 
@@ -436,13 +443,6 @@ def visualize_decision_boundary_clusters_2D(X, n_clusters, plot_dir='plots', met
     y_min, y_max = reduced_data[:, 1].min() - 0.1, reduced_data[:, 1].max() + 0.1
     xx, yy = np.meshgrid(np.arange(x_min, x_max, h), np.arange(y_min, y_max, h))
 
-    '''
-    print("xmin xmax", x_min, x_max)
-    print("ymin ymax", y_min, y_max)
-    print("xxmin xxmax", xx.min(), xx.max())
-    print("yymin yymax", yy.min(), yy.max())
-    '''
-
     # Obtain labels for each point in mesh. Use last trained model.
     Z = kmeans.predict(np.c_[xx.ravel(), yy.ravel()])
 
@@ -471,7 +471,7 @@ def visualize_decision_boundary_clusters_2D(X, n_clusters, plot_dir='plots', met
     plt.clf()
 
 
-def check_multiple_types_per_case(df, type='beslissing'):
+def check_multiple_types_per_case(df, type='beslissing') -> None:
     '''
     Function to check whether we have the same amount of case rulings ('beslissing')
     as we have cases. Assumes 'ECLI' and 'type' column.
@@ -487,12 +487,12 @@ def check_multiple_types_per_case(df, type='beslissing'):
     types = df.loc[df['type'] == type]
 
     if len(ECLIds.unique()) == len(types):
-        print(f"Each of the {len(types)} cases has a single decision section")
+        log.info("Each of the %s cases has a single decision section", len(types))
     else:
         # If they do not match, return which cases have multiple decisions
         # It can happen a case has multiple 'beslissing' sections.
         # E.g. extra: "8 Beslissing omtrent in beslag genomen en niet teruggegeven geldbedrag" (ECLI:NL:RBNHO:2020:10314)
-        print(f"The following cases have multiple sections of type {type}")
+        log.warning("The following cases have multiple sections of type %s", type)
 
         if 'ECLI' in df.keys():
             df_type_per_ECLI = df.groupby('ECLI').apply(lambda x: len(x[x['type'] == type]))
@@ -500,7 +500,7 @@ def check_multiple_types_per_case(df, type='beslissing'):
             df_type_per_ECLI = df.groupby(df.index).apply(lambda x: len(x[x['type'] == type]))
 
         df_cases_with_multiple_types = df_type_per_ECLI[ df_type_per_ECLI > 1 ]
-        print(df_cases_with_multiple_types)
+        log.info("\n%s", df_cases_with_multiple_types)
         '''
         For 'beslissing':
 
@@ -537,7 +537,7 @@ def check_multiple_types_per_case(df, type='beslissing'):
         '''
 
 
-def cited_articles(df):
+def cited_articles(df) -> list:
     '''
     Given a dataframe with a list of articles saved under the column 'articles',
     retrieve all cited (unique) law articles
@@ -549,18 +549,15 @@ def cited_articles(df):
     articles = articles[articles.map(lambda x: len(x) > 0)]
 
     # Flatten
-    articles = [ article for sub in articles for article in sub ]
+    articles = [article for sub in articles for article in sub]
 
     # Get unique values
     articles = sorted(np.unique(articles))
 
-    '''
-['04', '1', '10', '107', '10a', '11', '11b', '12', '13', '138', '14', '141', '14a', '14b', '14c', '14d', '14e', '14f', '14g', '15', '157', '163', '169', '175', '176', '177', '178', '179', '179a', '18', '184', '1990', '1994', '1a', '2', '2002', '2004', '2016', '2017', '2018', '21', '225', '228', '22b', '22c', '22d', '23', '231b', '239', '24', '240b', '242', '244', '245', '246', '247', '248', '248a', '248b', '249', '24c', '250', '254a', '26', '261', '266', '267', '27', '273f', '28', '282', '285', '285b', '287', '289', '29', '3', '300', '301', '302', '304', '307', '308', '31', '310', '311', '312', '317', '321', '326', '33', '336', '33a', '34', '350', '355', '36', '36b', '36c', '36d', '36e', '36f', '37a', '37b', '38', '38a', '38e', '38m', '38n', '38v', '38w', '38z', '3a', '4', '40', '416', '417b', '420', '420b', '420t', '45', '46', '47', '48', '49', '4b', '5', '51', '54', '55', '56', '57', '6', '60a', '61', '62', '63', '7', '72', '77a', '77c', '77g', '77i', '77m', '77n', '77s', '77w', '77x', '77y', '77z', '7a', '8', '853', '9', '91', '92', '9a']
-    '''
-
     return articles
 
-def check_articles(df):
+
+def check_articles(df) -> None:
     '''
     Article references are parsed from 'wettelijke voorschriften section'.
     This function performs some checks:
@@ -578,11 +575,11 @@ def check_articles(df):
         ECLIds = df.index
 
     # Unique cases
-    print("Number of unique cases", len(ECLIds.unique()))
+    log.info("Number of unique cases %s.", len(ECLIds.unique()))
 
     # Sections with 'wettelijke voorschriften'
     voorschriften = df.loc[df['type'] == 'wettelijke voorschriften']
-    print("Number of wettelijke voorschriften:", len(voorschriften))
+    log.info("Number of wettelijke voorschriften: %s", len(voorschriften))
 
     # Does each case have a wettelijke voorschriften section?
     if 'ECLI' in df.keys():
@@ -592,8 +589,8 @@ def check_articles(df):
     df_cases_without_voorschriften = df_voorschriften_per_ECLI[df_voorschriften_per_ECLI == 0]
 
     # Check wettelijke voorschriften sections where no articles are found
-    print(len(df_cases_without_voorschriften), "cases without wettelijke voorschriften")
-    print(df_cases_without_voorschriften)
+    log.info("%s cases without wettelijke voorschriften.", len(df_cases_without_voorschriften))
+    log.info("%s", df_cases_without_voorschriften)
 
     df_cases_with_multiple_voorschriften = df_voorschriften_per_ECLI[df_voorschriften_per_ECLI > 1]
     print(len(df_cases_with_multiple_voorschriften), "cases with multiple wettelijke voorschriften")
@@ -665,7 +662,7 @@ def kmeans_elbow_curve(X, style=2, max=15, metric='distortion'):
         plt.plot(Cs, scores)
         plt.show()
         # TODO We have not yet automatically determined the elbow value
-        print("WARNING: Automatic determination of elbow value not yet determined for style=1!")
+        log.warning("Automatic determination of elbow value not yet determined for style=1!")
     else:
         # Very nice yellowbrick visualization
         visualizer = KElbowVisualizer(
@@ -784,7 +781,7 @@ def diff_pattern(pattern_from: str, pattern_to: str):
     Utility function that shows how to change one pattern into another
     Useful for comparing two regular expressions.
     '''
-    print('{}\n=>\n{}'.format(pattern_from, pattern_to))
+    log.info('%s\n=>\n%s', pattern_from, pattern_to)
     for i, s in enumerate(difflib.ndiff(pattern_from, pattern_to)):
         if s[0] == ' ':
             continue
