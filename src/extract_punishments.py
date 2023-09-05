@@ -50,8 +50,8 @@ This script extracts the four main punishments and the TBS maatregel, which is f
 not a main punishment but so severe that it is included as one within this project.
 '''
 
-import os
 import re
+import os
 import math
 import subprocess
 from argparse import ArgumentParser
@@ -60,8 +60,9 @@ import numpy as np
 import pandas as pd
 
 from src.dataloader import DataLoader
+from src.punishment_pattern import PunishmentPattern
 from src import utils
-from src.utils import diff_pattern, get_logger
+from src.utils import get_logger
 
 log = get_logger(__name__)
 
@@ -84,47 +85,6 @@ to_days = {'jaren': 365,
            'dag': 1,
            ' ': 0,
            '': 0}
-
-# https://regex101.com/r/6fbiBD/12
-# NOTE I use this for regex development
-# 1. Develop pattern in an online regex tester
-# 2. Paste full pattern here
-# 3. Diff with the compiled version of the pattern to make sure both versions are up to date
-PATTERN_FULL = r'(?i)(?:(?P<modifier1>voorwaardelijk|proeftijd|niet|vervangend|indien|mindering|maatregel)[^\n\r;.]{0,100})?\b(?P<straf>gevangenis|gevangenisstraf|jeugddetentie|detentie|hechtenis|taakstraf|werkstraf|leerstraf|geldboete|vordering(?!\stenuitvoerlegging)(?!\stot\stenuitvoerlegging)|betaling)\b(?P<test1>[^\n\r;.]{0,85}?)(?P<nummer1>(?<!feit )\d+(?!\s?\]))(?P<test2>[^0-9\n\r;.]{0,30}?)(?P<eenheid1>jaar|jaren|maanden|maand|week|weken|dag|dagen|uur|uren|euro|,[-\d=]{1,2}|(?:\/|-|:)?[\d.]+(?!\s?\])(?:,[-\d=]{1,2})?)(?P<niettest1>[^0-9\n\r;.]{0,15})(?:(?P<nummer2>(?<!feit )\d+(?!\s?\]))[^0-9\n\r;.]{0,30}?(?:\s(?P<eenheid2>jaar|jaren|maanden|maand|week|weken|dagen|dag|uur|uren)))?(?:(?P<niettest2>[^\n\r;.]{0,150})(?P<modifier2>voorwaardelijk|proeftijd|niet|vervangend|indien|hechtenis|wederrechtelijk))?'
-
-
-class PunishmentPattern():
-    """Object to compose patterns for punishment extraction."""
-
-    def __init__(self):
-        # Regex components (see explanation under docs)
-        # Be aware that regex { } require escapes
-        self.connector = r'[^\n\r;.]{0,100}'
-        self.connector_long = r'[^\n\r;.]{0,150}'
-        self.modifier1 = r'(?P<modifier1>voorwaardelijk|proeftijd|niet|vervangend|indien|mindering|maatregel)'
-        self.modifier2 = r'(?P<modifier2>voorwaardelijk|proeftijd|niet|vervangend|indien|hechtenis|wederrechtelijk)'
-        self.straf = r'gevangenis|gevangenisstraf|jeugddetentie|detentie|hechtenis|taakstraf|werkstraf|leerstraf|geldboete|vordering(?!\stenuitvoerlegging)(?!\stot\stenuitvoerlegging)|betaling'
-        self.nummer = r'(?<!feit )\d+(?!\s?\]'
-        self.eenheid1 = r'jaar|jaren|maanden|maand|week|weken|dag|dagen|uur|uren|euro|,[-\d=]{1,2}|(?:\/|-|:)?[\d.]+(?!\s?\])(?:,[-\d=]{1,2})?'
-        self.eenheid2 = r'jaar|jaren|maanden|maand|week|weken|dagen|dag|uur|uren' # diff with eenheid1 is absence of money-related matching
-        self.middle = r'\b(?P<straf>{})\b(?P<test1>[^\n\r;.]{{0,85}}?)(?P<nummer1>{}))(?P<test2>[^0-9\n\r;.]{{0,30}}?)(?P<eenheid1>{})(?P<niettest1>[^0-9\n\r;.]{{0,15}})(?:(?P<nummer2>{}))[^0-9\n\r;.]{{0,30}}?(?:\s(?P<eenheid2>{})))?'.format(self.straf, self.nummer, self.eenheid1, self.nummer, self.eenheid2)
-
-        # The composed pattern
-        self.pattern = r'(?i)(?:{}{})?{}(?:(?P<niettest2>{}){})?'.format(self.modifier1, self.connector, self.middle, self.connector_long, self.modifier2)
-
-        # Regex for TBS (ter beschikking stelling)
-        self.pattern_tbs = r'(?i)(?:(?P<verlenging>verlengt|verlenging).{0,50})?(?P<TBS>TBS|terbeschikkingstelling|ter beschikking (?:wordt |is )?(?:stelling|gesteld))(?:(?!voorwaarde|verple).){0,100}(?P<type>voorwaarden|verpleging|verpleegd)?'
-
-        # Regex for vrijspraak (acquittal)
-        # We are more liberal here; do not let period block match, e.g. in ``wijst het verzoek tot wraking van mr. H.H. Dethmers af.''
-        # Instead, just look within a certain window but use a tempered greedy scope.
-        # Do not match `ne bis in idem` constructions like: 'spreekt verdachte vrij van wat meer of anders is ten laste gelegd'.
-        self.pattern_vrijspraak = r'(?i)((?P<nebisinidem1>meer of anders (?:ten laste is gelegd|is ten laste gelegd|is tenlastegelegd|tenlastegelegd is)).{0,50})?(?P<vrijspraak>vrijgesproken|vrijspraak|spreekt[^.\r\n;]*\svrij|wijst[^\r\n;]{0,100}\saf)(?:(?!meer of anders).){0,50}(?P<nebisinidem2>meer of anders (?:ten laste is gelegd|is ten laste gelegd|is tenlastegelegd|tenlastegelegd is))?'
-
-        # Pre-compile the regular expressions because they will be applied frequently
-        self.regex_hoofdstraf = re.compile(self.pattern)
-        self.regex_TBS = re.compile(self.pattern_tbs)
-        self.regex_vrijspraak = re.compile(self.pattern_vrijspraak)
 
 
 def label_hoofdstraf(pp: PunishmentPattern, beslissing: str) -> tuple:
@@ -520,20 +480,17 @@ if __name__ == '__main__':
     data_dir = args.data_dir
     DEBUG = args.debug
 
-    print("Loading from", data_dir + data_fn)
+    log.info("Loading from %s", data_dir + data_fn)
 
     # Load the data frame from the specified csv
     dataloader = DataLoader(data_dir=data_dir, data_key='data', data_fn=data_fn, target='type')
     df = dataloader.load()
 
     # Check which articles of law are cited in the corpus
-    print(utils.check_articles(df))
+    utils.check_articles(df)
 
     # Compile the regex patterns used for extracting punishments
     pp = PunishmentPattern()
-
-    # Check whether the structured regex is the same to the full regex after formatting
-    diff_pattern(pp.pattern, PATTERN_FULL)
 
     # Set this flag if you only want to check and debug some specific cases and test cases
     if not DEBUG:
@@ -543,10 +500,6 @@ if __name__ == '__main__':
     else:
         log.info("DEBUG MODE ENABLED.")
         log.info("Running tests...")
-        # NOTE this delayed import is a quick fix because I have a circular import between
-        # this script and eval_punishment_extraction
-        # TODO refactor PunishmentPattern to its own module
-        from src.eval_punishment_extraction import manual_eval_random_cases
 
         # Run the pattern on a set of tests
         subprocess.run(['python', '-m', 'pytest', 'tests/test_extract_punishments.py'])
@@ -575,5 +528,8 @@ if __name__ == '__main__':
         fn_out = 'experiments/evaluate_strafmaat.md'
 
         # Select random cases for manual validation
+        # NOTE this delayed import is a quick fix because I have a circular import between
+        # this script and eval_punishment_extraction
+        from src.eval_punishment_extraction import manual_eval_random_cases
         manual_eval_random_cases(df, pp, seed=2021, fn_out=fn_out,
                                  old_val_ECLIs=old_val_ECLIs, n_samples=n_samples)

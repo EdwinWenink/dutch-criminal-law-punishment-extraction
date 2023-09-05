@@ -5,7 +5,12 @@ This script writes out a set of randomly selected cases for in-depth manual eval
 import sys
 import random
 import pandas as pd
-from src.extract_punishments import label_hoofdstraf, PunishmentPattern
+
+from src.extract_punishments import label_hoofdstraf
+from src.punishment_pattern import PunishmentPattern
+from src.utils import get_logger
+
+log = get_logger(__name__)
 
 
 def manual_eval_random_cases(df: pd.DataFrame, pp: PunishmentPattern,
@@ -33,7 +38,7 @@ def manual_eval_random_cases(df: pd.DataFrame, pp: PunishmentPattern,
         old_val_ECLIs = list(old_val_cases.index)
 
     if n_samples > 0:
-        print(f"Randomly sampling {n_samples} cases.")
+        log.info("Randomly sampling %s cases.", n_samples)
         random.seed(seed)
         idx = random.sample(range(len(beslissingen)), k=n_samples)
         cases = beslissingen.iloc[idx]['data']
@@ -42,27 +47,25 @@ def manual_eval_random_cases(df: pd.DataFrame, pp: PunishmentPattern,
         if old_val_ECLIs:
             # Assert there's no overlap before merging
             intersection = set(old_val_ECLIs) & set(ECLIs)
-            print(len(intersection), intersection)
-            assert len(intersection) == 0
+            assert len(intersection) == 0, intersection
 
-        print("Randomly selected cases for validation:", ECLIs, len(ECLIs))
+        log.info("Randomly selected cases for validation: %s %s", ECLIs, len(ECLIs))
 
     # Merge if applicable
     if old_val_ECLIs and ECLIs:
-        print("Merging randomly selected cases with manually provided cases.")
+        log.info("Merging randomly selected cases with manually provided cases.")
         cases = pd.concat([old_val_cases, cases], axis=0)
         ECLIs = old_val_ECLIs + ECLIs
     elif old_val_ECLIs:
-        print("Using manually provided cases only.")
+        log.info("Using manually provided cases only.")
         ECLIs = old_val_ECLIs
         cases = old_val_cases
 
     if not ECLIs:
-        print("ERROR: you have not selected any cases for manual evaluation.")
-        print("Terminating.")
+        log.error("You have not selected any cases for manual evaluation. Terminating.")
         return
 
-    print("All selected cases for validation:", set(ECLIs), len(set(ECLIs)))
+    log.info("All selected cases for validation:", set(ECLIs), len(set(ECLIs)))
     assert len(ECLIs) == len(cases)  # N.B. may contain multiple sections from the same case!
 
     sys.stdout = open(fn_out, 'w', encoding='utf-8')
