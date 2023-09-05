@@ -50,5 +50,7 @@ if __name__ == '__main__':
     # 3. Diff with the compiled version of the pattern to make sure both versions are up to date
     PATTERN_FULL = r'(?i)(?:(?P<modifier1>voorwaardelijk|proeftijd|niet|vervangend|indien|mindering|maatregel)[^\n\r;.]{0,100})?\b(?P<straf>gevangenis|gevangenisstraf|jeugddetentie|detentie|hechtenis|taakstraf|werkstraf|leerstraf|geldboete|vordering(?!\stenuitvoerlegging)(?!\stot\stenuitvoerlegging)|betaling)\b(?P<test1>[^\n\r;.]{0,85}?)(?P<nummer1>(?<!feit )\d+(?!\s?\]))(?P<test2>[^0-9\n\r;.]{0,30}?)(?P<eenheid1>jaar|jaren|maanden|maand|week|weken|dag|dagen|uur|uren|euro|,[-\d=]{1,2}|(?:\/|-|:)?[\d.]+(?!\s?\])(?:,[-\d=]{1,2})?)(?P<niettest1>[^0-9\n\r;.]{0,15})(?:(?P<nummer2>(?<!feit )\d+(?!\s?\]))[^0-9\n\r;.]{0,30}?(?:\s(?P<eenheid2>jaar|jaren|maanden|maand|week|weken|dagen|dag|uur|uren)))?(?:(?P<niettest2>[^\n\r;.]{0,150})(?P<modifier2>voorwaardelijk|proeftijd|niet|vervangend|indien|hechtenis|wederrechtelijk))?'
 
+    pp = PunishmentPattern()
+
     # Check whether the structured regex is the same to the full regex after formatting
     diff_pattern(pp.pattern, PATTERN_FULL)
