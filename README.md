@@ -2,6 +2,8 @@
 
 Project for extracting punishment vectors from Dutch criminal law.
 
+Read the [corresponding paper](https://www.researchgate.net/publication/369775815_Punishment_extraction_from_Dutch_criminal_cases_in_courts_of_first_instance).
+
 Set up as a Hydra pipeline with configurable components.
 By default all components run as a sequential pipeline.
 
